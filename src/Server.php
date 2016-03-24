@@ -57,23 +57,36 @@ class Server extends Net
     public function close()
     {
 
-        parent::close();
-        // /@TODO recheck this code
-        foreach ($this->connections as $peer) {
+        foreach ($this->connections as $index => $peer) {
             /**
-             * @var $peer \Saw\Net\Peer
+             * @var $peer \Esockets\Peer
              */
             $peer->doDisconnect();
+            unset($this->connections[$index], $peer);
         }
 
-        // socket_close($this->_socket);
-        out('is unix domain: ' . ($this->socket_domain == AF_UNIX ? 'true' : 'false'));
         if ($this->socket_domain === AF_UNIX) {
             if (file_exists($this->socket_address))
                 unlink($this->socket_address);
             else
                 trigger_error(sprintf('Pipe file "%s" not found', $this->socket_address));
         }
+        if ($this->opened)
+            parent::close();
+        $this->opened = false;
+        // /@TODO recheck this code
+    }
+
+    public function send($data)
+    {
+        $ok = true;
+        foreach ($this->connections as $peer) {
+            /**
+             * @var $peer \Esockets\Peer
+             */
+            $ok &= $peer->send($data);
+        }
+        return $ok;
     }
 
     public function doDisconnect($client)
@@ -101,14 +114,13 @@ class Server extends Net
     public function doAccept()
     {
         if ($connection = socket_accept($this->connection)) {
-            out('accepted whois?');
             return $this->_onAccept($connection);
         }
         return false;
     }
 
     /**
-     * @param callable $callback
+     * @param callable $callback ($peer)
      * Give callback function($client)
      */
     public function onAccept(callable $callback)

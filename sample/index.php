@@ -22,22 +22,15 @@ spl_autoload_register(function ($class) {
 });
 
 
-defined('SAW_ENVIRONMENT') or define('SAW_ENVIRONMENT', 'Unknown');
 define('INTERVAL', 1000); // 1ms
 
+date_default_timezone_set('Asia/Yekaterinburg');
 ini_set('display_errors', true);
 error_reporting(E_ALL);
 ini_set('log_errors', true);
 ini_set('error_log', __DIR__ . '/messages.log');
+file_put_contents('messages.log', '');
 
-function out($message)
-{
-    $message = sprintf('{%s}: %s', SAW_ENVIRONMENT, $message);
-    if (ini_get('log_errors'))
-        error_log($message);
-    else
-        echo $message;
-}
 
 function error_type($type)
 {
@@ -77,24 +70,71 @@ function error_type($type)
 }
 
 set_exception_handler(function (Exception $e) {
-    out(sprintf('Вызвана ошибка %d: %s; %s', $e->getCode(), $e->getMessage(), $e->getTraceAsString()));
+    error_log(sprintf('Вызвана ошибка %d: %s; %s', $e->getCode(), $e->getMessage(), $e->getTraceAsString()));
 });
 
 set_error_handler(function ($errno, $errstr, $errfile, $errline, array $errcontext) {
-    out(sprintf('[%s]: %s in %s at %d line', error_type($errno), $errstr, $errfile, $errline));
+    error_log(sprintf('[%s]: %s in %s at %d line', error_type($errno), $errstr, $errfile, $errline));
 });
 
 $server = new \Esockets\Server();
-$server->open();
+if (!$server->open()) {
+    echo ' Не удалось запустить сервер! <br>' . PHP_EOL;
+    exit;
+}
+$server->onAccept(function ($peer) {
+    /**
+     * @var $peer \Esockets\Peer
+     */
+    error_log(' Принял ' . $peer->getAddress() . ' !');
+    $peer->onReceive(function ($msg) use ($peer) {
+        /**
+         * @var $this \Esockets\Peer
+         */
+        error_log(' Получил от ' . $peer->getAddress() . $msg . ' !');
+    });
+    $peer->onDisconnect(function () use ($peer) {
+        error_log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
+    });
+});
 
 
 $client = new Esockets\Client();
-$client->connect();
+if ($client->connect()) {
+    error_log('успешно соединился!');
+}
+$client->onDisconnect(function () {
+    error_log('Меня отсоединили или я сам отсоединился!');
+});
+$client->onReceive(function ($msg) {
+    error_log('Получил что то: ' . $msg . ' !');
+});
 
-$server->doAccept();
+$work = new \Esockets\WorkManager();
+$work->addWork('serverAccept', [$server, 'doAccept'], [], ['always' => true, 'interval' => 5000]);
+$work->addWork('serverReceive', [$server, 'doReceive'], [], ['always' => true, 'interval' => 1000]);
+$work->addWork('clientReceive', [$client, 'doReceive'], [], ['always' => true, 'interval' => 1000]);
 
-$client->send('HELLO WORLD!');
+$work->execWork();
 
-$server->doReceive();
+if ($client->send('HELLO WORLD!')) {
+    error_log('Отправил!');
+}
+if ($server->send('HELLO!')) {
+    error_log('Я тоже отправил!');
+}
+
+for ($i = 0; $i < 2; $i++) {
+    $work->execWork();
+    sleep(1);
+}
+$work->deleteWork('serverReceive');
 
 $server->close();
+
+for ($i = 0; $i < 2; $i++) {
+    $work->execWork();
+    sleep(1);
+}
+
+echo ' Окончил работу!<br>' . PHP_EOL;

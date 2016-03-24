@@ -10,10 +10,7 @@
 
 namespace Esockets;
 
-/**
- * Class Client
- * @package Saw\Net
- */
+
 class Peer extends Net
 {
     /**
@@ -36,6 +33,16 @@ class Peer extends Net
             return $this;
         }
         return false;
+    }
+
+    public function getAddress()
+    {
+        $address = $port = null;
+        if (socket_getpeername($this->connection, $address, $port)) {
+            return $address . ':' . $port;
+        } else {
+            return 'Unknown';
+        }
     }
 
     public function close()

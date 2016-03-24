@@ -20,14 +20,14 @@ abstract class Net
     const DATA_STRING = 8;
     const DATA_ARRAY = 16;
     const DATA_EXTENDED = 32; // reserved for objects
-    const DATA_EXTENDED_2 = 64; // reserved
+    const DATA_PING_PONG = 64; // reserved
     const DATA_CONTROL = 128;
 
     const SOCKET_WAIT = 1000; // 1 ms ожидание на повторные операции на сокете
     /**
      * @var int type of socket
      */
-    protected $socket_domain = AF_UNIX;
+    protected $socket_domain = AF_INET;
 
     /**
      * @var string address of socket connection
@@ -37,7 +37,7 @@ abstract class Net
     /**
      * @var int port of socket connection
      */
-    protected $socket_port = 0;
+    protected $socket_port = 8082;
 
     /**
      * @var resource of socket connection
@@ -77,13 +77,13 @@ abstract class Net
         // read message meta
         if (($data = $this->_read(5)) !== false) {
             list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', $data));
-            //out('read length ' . $length);
-            //out('flag ' . $flag);
-            out('read try ' . $length . ' bytes');
+            error_log('read length ' . $length);
+            error_log('flag ' . $flag);
+            error_log('read try ' . $length . ' bytes');
             if (($data = $this->_read($length, true)) !== false) {
-                out('data retrieved');
+                error_log('data retrieved');
             } else {
-                out('cannot retrieve data');
+                error_log('cannot retrieve data');
             }
             if ($flag & self::DATA_JSON) {
                 $data = json_decode($data, $flag & self::DATA_ARRAY ? true : false);
@@ -127,16 +127,16 @@ abstract class Net
                 return false;
                 break;
             case 'integer':
-                $flag |= self::DATA_INT;
+                $flag = self::DATA_INT;
                 break;
             case 'double':
-                $flag |= self::DATA_FLOAT;
+                $flag = self::DATA_FLOAT;
                 break;
             case 'array':
-                $flag |= self::DATA_ARRAY | self::DATA_JSON;
+                $flag = self::DATA_ARRAY | self::DATA_JSON;
                 break;
             case 'object':
-                $flag |= self::DATA_EXTENDED | self::DATA_JSON;
+                $flag = self::DATA_EXTENDED | self::DATA_JSON;
                 trigger_error('Values of type Object cannot be transmitted on current Net version', E_USER_WARNING);
                 return false;
                 break;
@@ -217,40 +217,42 @@ abstract class Net
         $try = 0;
         while ($length > 0) {
             $data = socket_read($this->connection, $length);
-            if ($data === false) {
+            error_log('data is ' . var_export($data, true) . ' from ' . get_class($this));
+            if ($data === false || $data === '') {
                 switch (socket_last_error($this->connection)) {
                     case SOCKET_EAGAIN:
-                        if (!strlen($buffer) && !$required) {
+                        if (!strlen($buffer) && (!$required || $try++ > 100)) {
                             return false;
                         } else {
-                            out('Socket read error: SOCKET_EAGAIN at READING');
+                            error_log('Socket read error: SOCKET_EAGAIN at READING');
                             usleep(self::SOCKET_WAIT);
                         }
                         break;
                     default:
-                        out('SOCKET READ ERROR!!!' . socket_last_error($this->connection));
-                        throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
+                        error_log('SOCKET READ ERROR!!!' . socket_last_error($this->connection) . ':' . socket_strerror(socket_last_error($this->connection)));
+                        return false;
+                        //throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
                 }
-            } elseif ($data === '') {
-                /**
-                 * В документации PHP написано, что socket_read выдает false, если сокет отсоединен.
-                 * Однако, как выяснилось, это не так. Если сокет отсоединен,
-                 * то socket_read возвращает пустую строку. Поэтому в данном блоке будем
-                 * обрабатывать ситуацию обрыва связи.
-                 * TODO запилить, что описал
-                 */
-                trigger_error('Socket read 0 bytes', E_USER_WARNING);
-                out('Пробуем получить код ошибки...');
-                throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
-                if ($try++ > 100 && $required) {
-                    trigger_error('Fail require read data', E_USER_ERROR);
-                }
-                return false;
+                /*} elseif ($data === '') {
+                    /**
+                     * В документации PHP написано, что socket_read выдает false, если сокет отсоединен.
+                     * Однако, как выяснилось, это не так. Если сокет отсоединен,
+                     * то socket_read возвращает пустую строку. Поэтому в данном блоке будем
+                     * обрабатывать ситуацию обрыва связи.
+                     * TODO запилить, что описал
+                     *
+                    trigger_error('Socket read 0 bytes', E_USER_WARNING);
+                    error_log('Пробуем получить код ошибки...');
+                    //throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
+                    if ($required || $try++ > 100) {
+                        trigger_error('Fail require read data', E_USER_ERROR);
+                    }
+                    continue; // продолжаем читать в цикле*/
             } else {
                 $buffer .= $data;
                 $length -= strlen($data);
                 $try = 0; // обнуляем счетчик попыток чтения
-                usleep(1000);
+                usleep(self::SOCKET_WAIT);
             }
         }
         return $buffer;
@@ -272,11 +274,11 @@ abstract class Net
                  */
                 switch (socket_last_error($this->connection)) {
                     case SOCKET_EAGAIN:
-                        out('Socket write error: SOCKET_EAGAIN at writing');
+                        error_log('Socket write error: SOCKET_EAGAIN at writing');
                         usleep(self::SOCKET_WAIT);
                         break;
                     default:
-                        out('SOCKET READ ERROR!!!' . socket_last_error($this->connection));
+                        error_log('SOCKET READ ERROR!!!' . socket_last_error($this->connection));
                         throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
                 }
 

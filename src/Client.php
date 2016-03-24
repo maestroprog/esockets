@@ -10,10 +10,7 @@
 
 namespace Esockets;
 
-/**
- * Class Client
- * @package Saw\Net
- */
+
 class Client extends Net
 {
     /**

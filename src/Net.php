@@ -8,7 +8,7 @@
  * Time: 20:42
  */
 
-namespace Saw\Net;
+namespace Esockets;
 
 
 abstract class Net
@@ -66,7 +66,7 @@ abstract class Net
      */
     private $mid = 0;
 
-    public function __construct($config)
+    public function __construct($config = [])
     {
         foreach ($config as $key => $val)
             if (isset($this->{$key})) $this->{$key} = $val;

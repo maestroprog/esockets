@@ -1,0 +1,35 @@
+[22-Mar-2016 16:25:51 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:26:01 UTC] {Unknown}: [E_WARNING]: socket_bind(): unable to bind address [98]: Address already in use in /home/admin/web/saw.smtest/public_html/vendors/esockets-php/src/Server.php at 147 line
+[22-Mar-2016 16:26:01 UTC] error: 98
+[22-Mar-2016 16:26:01 UTC] {Unknown}: is unix domain: true
+[22-Mar-2016 16:26:01 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:26:01 UTC] {Unknown}: [E_WARNING]: socket_bind(): unable to bind address [98]: Address already in use in /home/admin/web/saw.smtest/public_html/vendors/esockets-php/src/Server.php at 147 line
+[22-Mar-2016 16:26:01 UTC] error: 98
+[22-Mar-2016 16:26:01 UTC] {Unknown}: is unix domain: true
+[22-Mar-2016 16:26:01 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:27:04 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:27:41 UTC] {Unknown}: [E_WARNING]: socket_bind(): unable to bind address [98]: Address already in use in /home/admin/web/saw.smtest/public_html/vendors/esockets-php/src/Server.php at 147 line
+[22-Mar-2016 16:27:41 UTC] error: 98
+[22-Mar-2016 16:27:41 UTC] {Unknown}: is unix domain: true
+[22-Mar-2016 16:27:41 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:27:41 UTC] {Unknown}: is unix domain: true
+[22-Mar-2016 16:27:49 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:27:49 UTC] {Unknown}: is unix domain: true
+[22-Mar-2016 16:27:49 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:27:49 UTC] {Unknown}: is unix domain: true
+[22-Mar-2016 16:35:41 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:35:41 UTC] {Unknown}: read try 12 bytes
+[22-Mar-2016 16:35:41 UTC] {Unknown}: data retrieved
+[22-Mar-2016 16:35:41 UTC] {Unknown}: is unix domain: true
+[22-Mar-2016 16:35:42 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:35:42 UTC] {Unknown}: read try 12 bytes
+[22-Mar-2016 16:35:42 UTC] {Unknown}: data retrieved
+[22-Mar-2016 16:35:42 UTC] {Unknown}: is unix domain: true
+[22-Mar-2016 16:35:42 UTC] {Unknown}: accepted whois?
+[22-Mar-2016 16:35:42 UTC] {Unknown}: read try 12 bytes
+[22-Mar-2016 16:35:42 UTC] {Unknown}: data retrieved
+[22-Mar-2016 16:35:42 UTC] {Unknown}: is unix domain: true
+[24-Mar-2016 05:34:54 UTC] {Unknown}: accepted whois?
+[24-Mar-2016 05:34:54 UTC] {Unknown}: read try 12 bytes
+[24-Mar-2016 05:34:54 UTC] {Unknown}: data retrieved
+[24-Mar-2016 05:34:54 UTC] {Unknown}: is unix domain: true

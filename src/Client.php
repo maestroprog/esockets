@@ -8,7 +8,7 @@
  * Time: 8:55
  */
 
-namespace Saw\Net;
+namespace Esockets;
 
 /**
  * Class Client

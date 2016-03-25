@@ -57,6 +57,11 @@ abstract class Net
      */
     private $event_receive;
 
+    /**
+     * @var callable
+     */
+    private $event_pong;
+
     /* private variables */
 
     /**
@@ -97,6 +102,18 @@ abstract class Net
             if ($flag & self::DATA_CONTROL) {
                 // control message parser
                 // @TODO
+                if ($flag & self::DATA_PING_PONG) {
+                    if (is_callable($this->event_pong)) {
+                        call_user_func($this->event_pong, $data);
+                    } else {
+                        error_log('pong received');
+                    }
+                }
+            } elseif ($flag & self::DATA_PING_PONG) {
+                // отправляем исходные данные "pong" с исходным форматом, дополнительно устанавливая флаг DATA_CONTROL
+                $this->_send($data, $flag | self::DATA_CONTROL);
+                error_log('ping received and pong sended');
+                return;
             }
             $this->_onReceive($data);
         }
@@ -168,9 +185,24 @@ abstract class Net
         }
     }
 
+    public function ping()
+    {
+        $data = rand(1000, 9999);
+        $this->event_pong = function ($msg) use ($data) {
+            if ($msg === $data) {
+                error_log('ping corrected!');
+            } else {
+                error_log('PING FAIL!');
+            }
+        };
+        $this->_send($data, self::DATA_INT | self::DATA_PING_PONG);
+        error_log('ping sended');
+    }
+
     public function close()
     {
         if ($this->connection) {
+            $this->setBlock(); // блокируем сокет перед завершением его работы
             socket_shutdown($this->connection);
             socket_close($this->connection);
             $this->_onDisconnect();
@@ -231,7 +263,7 @@ abstract class Net
                     default:
                         error_log('SOCKET READ ERROR!!!' . socket_last_error($this->connection) . ':' . socket_strerror(socket_last_error($this->connection)));
                         return false;
-                        //throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
+                    //throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
                 }
                 /*} elseif ($data === '') {
                     /**

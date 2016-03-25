@@ -156,6 +156,7 @@ class Server extends Net
     private function _open()
     {
         if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $this->socket_domain > 1 ? getprotobyname('tcp') : 0)) {
+            socket_set_option($this->connection, SOL_SOCKET, SO_REUSEADDR, true);
             if (socket_bind($this->connection, $this->socket_address, $this->socket_port)) {
                 if (socket_listen($this->connection)) {
                     socket_set_nonblock($this->connection);

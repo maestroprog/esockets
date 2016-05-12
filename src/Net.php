@@ -10,6 +10,12 @@
 
 namespace Esockets;
 
+function error_log($msg)
+{
+    echo $msg . PHP_EOL;
+    \error_log($msg);
+}
+
 
 abstract class Net
 {
@@ -24,6 +30,8 @@ abstract class Net
     const DATA_CONTROL = 128;
 
     const SOCKET_WAIT = 1000; // 1 ms ожидание на повторные операции на сокете
+
+    const SOCKET_TIMEOUT = 30;
     /**
      * @var int type of socket
      */
@@ -132,6 +140,11 @@ abstract class Net
         } else {
             return false;
         }
+    }
+
+    public function doService()
+    {
+
     }
 
     public function send($data)
@@ -260,6 +273,10 @@ abstract class Net
                             usleep(self::SOCKET_WAIT);
                         }
                         break;
+                    case SOCKET_EPIPE:
+                    case SOCKET_ENOTCONN:
+                        $this->_onDisconnect();
+                        return false;
                     default:
                         error_log('SOCKET READ ERROR!!!' . socket_last_error($this->connection) . ':' . socket_strerror(socket_last_error($this->connection)));
                         return false;
@@ -308,14 +325,17 @@ abstract class Net
                     case SOCKET_EAGAIN:
                         error_log('Socket write error: SOCKET_EAGAIN at writing');
                         usleep(self::SOCKET_WAIT);
+                        return false;
+                        break;
+                    case SOCKET_EPIPE:
+                    case SOCKET_ENOTCONN:
+                        $this->_onDisconnect();
                         break;
                     default:
-                        error_log('SOCKET READ ERROR!!!' . socket_last_error($this->connection));
-                        throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
+                        error_log('SOCKET WRITE ERROR!!!' . socket_last_error($this->connection));
+                        throw new \Exception('Socket write error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
                 }
-
-                throw new \Exception('Socket write error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
-                //return false;
+                return false;
             } elseif ($wrote === 0) {
                 trigger_error('Socket written 0 bytes', E_USER_WARNING);
             } else {

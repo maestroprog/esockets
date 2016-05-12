@@ -11,7 +11,7 @@
 namespace Esockets;
 
 
-class Server extends Net
+class Server extends Net implements ServerInterface
 {
     /* server variables */
 
@@ -19,6 +19,11 @@ class Server extends Net
      * @var array Peer
      */
     protected $connections = [];
+
+    /**
+     * @var int
+     */
+    protected $connections_dsc = 0;
 
     /**
      * @var bool server state
@@ -31,6 +36,10 @@ class Server extends Net
      * @var callable
      */
     private $event_disconnect;
+    /**
+     * @var callable
+     */
+    private $event_disconnect_peer;
 
     /**
      * @var callable
@@ -77,6 +86,17 @@ class Server extends Net
         // /@TODO recheck this code
     }
 
+    public function ping()
+    {
+        error_log('Пингуем пиров');
+        foreach ($this->connections as $peer) {
+            /**
+             * @var $peer \Esockets\Peer
+             */
+            $peer->ping();
+        }
+    }
+
     public function send($data)
     {
         $ok = true;
@@ -101,14 +121,26 @@ class Server extends Net
      */
     public function onDisconnect(callable $callback)
     {
-        /**
-         * TODO
-         */
+        $this->event_disconnect = $callback;
     }
 
     protected function _onDisconnect()
     {
-        // TODO: Implement _onDisconnect() method.
+        if (is_callable($this->event_disconnect)) {
+            call_user_func($this->event_disconnect);
+        }
+    }
+
+    public function onDisconnectPeer(callable $callback)
+    {
+        $this->event_disconnect_peer = $callback;
+    }
+
+    public function _onDisconnectPeer(Peer $peer)
+    {
+        if (is_callable($this->event_disconnect_peer)) {
+            call_user_func_array($this->event_disconnect_peer, [$peer]);
+        }
     }
 
     public function doAccept()
@@ -130,22 +162,31 @@ class Server extends Net
 
     public function doReceive()
     {
-        foreach ($this->connections as $peer) {
+        foreach ($this->connections as $dsc => $peer) {
             /**
              * @var $peer Peer
              */
+            error_log('Читаю пира ' . $peer->getDsc() . ' on adddress ' . $dsc);
             $peer->doReceive();
         }
     }
 
     protected function _onAccept(&$connection)
     {
-        if ($peer = new Peer($connection)) {
+        while (isset($this->connections[$this->connections_dsc])) {
+            $this->connections_dsc++;
+        }
+        if ($peer = new Peer($connection, $this->connections_dsc)) {
             $peer->setNonBlock();
-            $this->connections[] = &$peer;
+            $this->connections[$this->connections_dsc] = &$peer;
             if (is_callable($this->event_accept)) {
                 call_user_func_array($this->event_accept, [$peer]);
             }
+            $peer->onDisconnect(function () use ($peer) {
+                error_log('Отсоединился пир ' . $peer->getDsc());
+                unset($this->connections[$peer->getDsc()]);
+                $this->_onDisconnectPeer($peer);
+            });
             return true;
         } else {
             trigger_error('Peer connection error');

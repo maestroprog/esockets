@@ -8,23 +8,22 @@
 
 require 'common.php';
 
-
 $client = new Esockets\Client();
 if ($client->connect()) {
-    error_log('успешно соединился!');
+    \Esockets\error_log('успешно соединился!');
 }
 $client->onDisconnect(function () {
-    error_log('Меня отсоединили или я сам отсоединился!');
+    \Esockets\error_log('Меня отсоединили или я сам отсоединился!');
 });
 $client->onReceive(function ($msg) {
-    error_log('Получил что то: ' . $msg . ' !');
+    \Esockets\error_log('Получил что то: ' . $msg . ' !');
 });
 
 // симулируем увеличение нагрузки
-for ($i = 10000; $i > 0; $i--) {
+for ($i = 1; $i > 0; $i--) {
 
     $client->ping();
-    usleep($i);
+    usleep($i*10000);
 }
 
 $client->close();
@@ -33,23 +32,23 @@ unset($client);
 // симулируем множество клиентов
 
 $clients = array();
-for ($i = 0; $i < 100; $i++) {
+for ($i = 0; $i < 1; $i++) {
 
     $client = new Esockets\Client();
     if ($client->connect()) {
-        error_log('успешно соединился!');
+        \Esockets\error_log('успешно соединился!');
     }
     $client->onDisconnect(function () {
-        error_log('Меня отсоединили или я сам отсоединился!');
+        \Esockets\error_log('Меня отсоединили или я сам отсоединился!');
     });
     $client->onReceive(function ($msg) {
-        error_log('Получил что то: ' . $msg . ' !');
+        \Esockets\error_log('Получил что то: ' . $msg . ' !');
     });
     $clients[$i] = $client;
     usleep(100000);
 }
 // симулируем большой трафик
-for ($i = 0; $i < 100; $i++) {
+for ($i = 0; $i < 1; $i++) {
     foreach ($clients as $j => $client) {
         $client->send('Hello, I am ' . $j . ' client for ' . $i . ' request! =)');
     }

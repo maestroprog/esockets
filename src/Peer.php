@@ -21,15 +21,21 @@ class Peer extends Net
     /* event variables */
 
     /**
-     * @var callable
+     * @var array of callable
      */
-    private $event_disconnect;
+    private $event_disconnect = [];
 
-    public function __construct(&$connection)
+    /**
+     * @var int дескриптор пира
+     */
+    private $dsc;
+
+    public function __construct(&$connection, $dsc)
     {
         if (is_resource($connection)) {
             $this->connection = $connection;
             $this->connected = true;
+            $this->dsc = $dsc;
             return $this;
         }
         return false;
@@ -45,6 +51,11 @@ class Peer extends Net
         }
     }
 
+    public function getDsc()
+    {
+        return $this->dsc;
+    }
+
     public function close()
     {
         parent::close();
@@ -58,13 +69,14 @@ class Peer extends Net
 
     public function onDisconnect(callable $callback)
     {
-        $this->event_disconnect = $callback;
+        $this->event_disconnect[] = $callback;
+        return max(array_keys($this->event_disconnect));
     }
 
     protected function _onDisconnect()
     {
-        if (is_callable($this->event_disconnect)) {
-            call_user_func($this->event_disconnect);
+        foreach ($this->event_disconnect as $event) {
+            call_user_func($event);
         }
     }
 

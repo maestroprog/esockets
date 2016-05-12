@@ -20,15 +20,15 @@ $server->onAccept(function ($peer) {
     /**
      * @var $peer \Esockets\Peer
      */
-    error_log(' Принял ' . $peer->getAddress() . ' !');
+    \Esockets\error_log(' Принял ' . $peer->getAddress() . ' !');
     $peer->onReceive(function ($msg) use ($peer) {
         /**
          * @var $this \Esockets\Peer
          */
-        error_log(' Получил от ' . $peer->getAddress() . $msg . ' !');
+        \Esockets\error_log(' Получил от ' . $peer->getAddress() . $msg . ' !');
     });
     $peer->onDisconnect(function () use ($peer) {
-        error_log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
+        \Esockets\error_log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
     });
 });
 
@@ -36,6 +36,10 @@ while (true) {
 
     $server->doAccept(); // принимаем новые соединения
     $server->doReceive(); // принимаем новые сообщения
+    if (time() % 3 === 0) {
+        $server->ping();
+    }
 
-    usleep(10000); // sleep for 10 ms
+    //usleep(10000); // sleep for 10 ms
+    sleep(1);
 }

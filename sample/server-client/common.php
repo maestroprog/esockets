@@ -6,6 +6,16 @@
  * Time: 20:26
  */
 
+define('INTERVAL', 1000); // 1ms
+
+date_default_timezone_set('Asia/Yekaterinburg');
+ini_set('display_errors', true);
+error_reporting(E_ALL);
+ini_set('log_errors', true);
+ini_set('error_log', __DIR__ . '/messages.log');
+file_put_contents('messages.log', '');
+
+set_time_limit(0);
 
 spl_autoload_register(function ($class) {
     $parts = explode('\\', $class);
@@ -21,16 +31,6 @@ spl_autoload_register(function ($class) {
         require $file;
     }
 });
-
-
-define('INTERVAL', 1000); // 1ms
-
-date_default_timezone_set('Asia/Yekaterinburg');
-ini_set('display_errors', true);
-error_reporting(E_ALL);
-ini_set('log_errors', true);
-ini_set('error_log', __DIR__ . '/messages.log');
-file_put_contents('messages.log', '');
 
 
 function error_type($type)

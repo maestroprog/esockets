@@ -38,13 +38,6 @@ interface ServerInterface extends NetInterface
     public function onConnectPeer(callable $callback);
 
     /**
-     * @param Peer $peer
-     * @return mixed
-     * вызывает событие соединения клиента
-     */
-    public function _onConnectPeer(Peer $peer);
-
-    /**
      * @param callable $callback
      * @return mixed
      * назначает событие при отсоединении пира
@@ -52,9 +45,15 @@ interface ServerInterface extends NetInterface
     public function onDisconnectPeer(callable $callback);
 
     /**
-     * @param Peer $peer
      * @return mixed
-     * вызывает событие при отсоединении пира
+     * отключает всех пиров
      */
-    public function _onDisconnectPeer(Peer $peer);
+    public function disconnectAll();
+
+    /**
+     * @param callable $callback
+     * @return mixed
+     * назначает событие при отсоединении всех пиров
+     */
+    public function onDisconnectAll(callable $callback);
 }

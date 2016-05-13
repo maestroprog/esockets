@@ -11,6 +11,16 @@ namespace Esockets;
 
 interface NetInterface
 {
+    const DATA_RAW = 0;
+    const DATA_JSON = 1;
+    const DATA_INT = 2;
+    const DATA_FLOAT = 4;
+    const DATA_STRING = 8;
+    const DATA_ARRAY = 16;
+    const DATA_EXTENDED = 32; // reserved for objects
+    const DATA_PING_PONG = 64; // reserved
+    const DATA_CONTROL = 128;
+
     /**
      * @return bool
      * соединяет с сетью
@@ -42,17 +52,21 @@ interface NetInterface
     public function ping();
 
     /**
+     * @return mixed
+     * функция, обеспечивающая жизнь сокету
+     * что делает:
+     * - контролирует текущее состояние соединения
+     * - проверяет связь через установленные промежутки времени
+     * - выполняет переподключение на установленные промежутки времени при тайм-ауте проверки связи
+     */
+    function live();
+
+    /**
      * @param callable $callback
      * @return mixed
      * назначает событие при отсоединении
      */
     public function onDisconnect(callable $callback);
-
-    /**
-     * @return mixed
-     * вызывает событие при отсоединении
-     */
-    function _onDisconnect();
 
     /**
      * @param callable $callback
@@ -62,11 +76,14 @@ interface NetInterface
     public function onRead(callable $callback);
 
     /**
-     * @param mixed $data
      * @return mixed
-     * вызывает событияе при чтении данных
+     * отвечает на поступающие пинги
      */
-    function _onRead($data);
+    function onPing($data);
 
-
+    /**
+     * @return mixed
+     * получает ответ на пинг
+     */
+    function onPong($msg);
 }

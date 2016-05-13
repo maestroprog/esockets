@@ -10,6 +10,7 @@
 
 namespace Esockets;
 
+
 function error_log($msg)
 {
     echo $msg . PHP_EOL;
@@ -17,21 +18,12 @@ function error_log($msg)
 }
 
 
-abstract class Net
+abstract class Net implements NetInterface
 {
-    const DATA_RAW = 0;
-    const DATA_JSON = 1;
-    const DATA_INT = 2;
-    const DATA_FLOAT = 4;
-    const DATA_STRING = 8;
-    const DATA_ARRAY = 16;
-    const DATA_EXTENDED = 32; // reserved for objects
-    const DATA_PING_PONG = 64; // reserved
-    const DATA_CONTROL = 128;
-
     const SOCKET_WAIT = 1000; // 1 ms ожидание на повторные операции на сокете
 
     const SOCKET_TIMEOUT = 30;
+
     /**
      * @var int type of socket
      */
@@ -57,13 +49,18 @@ abstract class Net
      */
     protected $vars = [];
 
+    /**
+     * @var array safe variable for user-setting
+     */
+    protected $vars_safe = [];
+
 
     /* event variables */
 
     /**
      * @var callable
      */
-    private $event_receive;
+    private $event_read;
 
     /**
      * @var callable
@@ -85,7 +82,42 @@ abstract class Net
             if (isset($this->{$key})) $this->{$key} = $val;
     }
 
-    public function doReceive()
+    /**
+     * @param $name
+     * @param $value
+     * set user variable
+     */
+    public function set($name, $value)
+    {
+        if (in_array($name, $this->safe_variables))
+            $this->vars[$name] = $value;
+    }
+
+    /**
+     * @param $name
+     * @return bool
+     * get user variable
+     */
+    public function get($name)
+    {
+        return isset($this->vars[$name]) ? $this->vars[$name] : null;
+    }
+
+    abstract public function connect();
+
+    public function disconnect()
+    {
+        if ($this->connection) {
+            $this->setBlock(); // блокируем сокет перед завершением его работы
+            socket_shutdown($this->connection);
+            socket_close($this->connection);
+            $this->_onDisconnect();
+        } else {
+            trigger_error('Socket already closed');
+        }
+    }
+
+    public function read()
     {
         // read message meta
         if (($data = $this->_read(5)) !== false) {
@@ -123,28 +155,8 @@ abstract class Net
                 error_log('ping received and pong sended');
                 return;
             }
-            $this->_onReceive($data);
+            $this->_onRead($data);
         }
-    }
-
-    public function onReceive(callable $callback)
-    {
-        $this->event_receive = $callback;
-    }
-
-    protected function _onReceive(&$data)
-    {
-        if (is_callable($this->event_receive)) {
-            call_user_func_array($this->event_receive, [$data]);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public function doService()
-    {
-
     }
 
     public function send($data)
@@ -212,48 +224,36 @@ abstract class Net
         error_log('ping sended');
     }
 
-    public function close()
+    public function live()
     {
-        if ($this->connection) {
-            $this->setBlock(); // блокируем сокет перед завершением его работы
-            socket_shutdown($this->connection);
-            socket_close($this->connection);
-            $this->_onDisconnect();
-        } else {
-            trigger_error('Socket already closed');
-        }
+
     }
 
     abstract protected function _onDisconnect();
 
-    public function setBlock()
+    public function onRead(callable $callback)
+    {
+        $this->event_read = $callback;
+    }
+
+    protected function _onRead(&$data)
+    {
+        if (is_callable($this->event_read)) {
+            call_user_func_array($this->event_read, [$data]);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    protected function setBlock()
     {
         socket_set_block($this->connection);
     }
 
-    public function setNonBlock()
+    protected function setNonBlock()
     {
         socket_set_nonblock($this->connection);
-    }
-
-    /**
-     * @param $name
-     * @param $value
-     * set user variable
-     */
-    public function set($name, $value)
-    {
-        $this->vars[$name] = $value;
-    }
-
-    /**
-     * @param $name
-     * @return bool
-     * get user variable
-     */
-    public function get($name)
-    {
-        return isset($this->vars[$name]) ? $this->vars[$name] : null;
     }
 
     private function _read($length, $required = false)

@@ -89,7 +89,7 @@ abstract class Net implements NetInterface
      */
     public function set($name, $value)
     {
-        if (in_array($name, $this->safe_variables))
+        if (in_array($name, $this->vars_safe))
             $this->vars[$name] = $value;
     }
 
@@ -256,6 +256,12 @@ abstract class Net implements NetInterface
         socket_set_nonblock($this->connection);
     }
 
+    /**
+     * @param $length
+     * @param bool $required
+     * @return bool|string
+     * функция, отвечающая за чтения входящих пакетов данных
+     */
     private function _read($length, $required = false)
     {
         $buffer = '';
@@ -307,6 +313,13 @@ abstract class Net implements NetInterface
         return $buffer;
     }
 
+    /**
+     * @param $data
+     * @param int $flag
+     * @return bool
+     * @throws \Exception
+     * функция, отвечающая за отправку пакетов данных
+     */
     private function _send($data, $flag = 0)
     {
         $length = strlen($data);

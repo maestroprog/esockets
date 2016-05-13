@@ -57,13 +57,48 @@ class Server extends Net implements ServerInterface
 
     public function open()
     {
-        return $this->opened ?: $this->_open();
+        if ($this->opened) return true;
+
+        if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $this->socket_domain > 1 ? getprotobyname('tcp') : 0)) {
+            socket_set_option($this->connection, SOL_SOCKET, SO_REUSEADDR, true);
+            if (socket_bind($this->connection, $this->socket_address, $this->socket_port)) {
+                if (socket_listen($this->connection)) {
+                    socket_set_nonblock($this->connection);
+                    $this->_open_try = false; // сбрасываем флаг попытки открыть сервер
+                    return $this->opened = true;
+                } else {
+                    throw new \Exception(socket_strerror(socket_last_error($this->connection)));
+                }
+            } else {
+                $error = socket_last_error($this->connection);
+                socket_clear_error($this->connection);
+                error_log('error: ' . $error);
+                switch ($error) {
+                    case SOCKET_EADDRINUSE:
+                        // если сокет уже открыт - пробуем его закрыть и снова открыть
+                        // @TODO socket close self::socket_close();
+                        // @todo recheck this code
+                        // closing socket and try restart
+                        $this->disconnect();
+                        if (!$this->_open_try) {
+                            $this->_open_try = true;
+                            return $this->open();
+                        }
+                        break;
+                    default:
+                        throw new \Exception(socket_strerror($error));
+                }
+            }
+        }
+        // @TODO delete next line...
+        trigger_error('Server open failed', E_USER_ERROR);
+        return false;
     }
 
     /**
      * close server
      */
-    public function close()
+    public function disconnectAll()
     {
 
         foreach ($this->connections as $index => $peer) {
@@ -81,7 +116,7 @@ class Server extends Net implements ServerInterface
                 trigger_error(sprintf('Pipe file "%s" not found', $this->socket_address));
         }
         if ($this->opened)
-            parent::close();
+            parent::disconnect();
         $this->opened = false;
         // /@TODO recheck this code
     }
@@ -143,10 +178,10 @@ class Server extends Net implements ServerInterface
         }
     }
 
-    public function doAccept()
+    public function listen()
     {
         if ($connection = socket_accept($this->connection)) {
-            return $this->_onAccept($connection);
+            return $this->_onConnectPeer($connection);
         }
         return false;
     }
@@ -155,23 +190,23 @@ class Server extends Net implements ServerInterface
      * @param callable $callback ($peer)
      * Give callback function($client)
      */
-    public function onAccept(callable $callback)
+    public function onConnectPeer(callable $callback)
     {
         $this->event_accept = $callback;
     }
 
-    public function doReceive()
+    public function read()
     {
         foreach ($this->connections as $dsc => $peer) {
             /**
              * @var $peer Peer
              */
             error_log('Читаю пира ' . $peer->getDsc() . ' on adddress ' . $dsc);
-            $peer->doReceive();
+            $peer->read();
         }
     }
 
-    protected function _onAccept(&$connection)
+    protected function _onConnectPeer(&$connection)
     {
         while (isset($this->connections[$this->connections_dsc])) {
             $this->connections_dsc++;
@@ -194,41 +229,4 @@ class Server extends Net implements ServerInterface
         }
     }
 
-    private function _open()
-    {
-        if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $this->socket_domain > 1 ? getprotobyname('tcp') : 0)) {
-            socket_set_option($this->connection, SOL_SOCKET, SO_REUSEADDR, true);
-            if (socket_bind($this->connection, $this->socket_address, $this->socket_port)) {
-                if (socket_listen($this->connection)) {
-                    socket_set_nonblock($this->connection);
-                    $this->_open_try = false; // сбрасываем флаг попытки открыть сервер
-                    return $this->opened = true;
-                } else {
-                    throw new \Exception(socket_strerror(socket_last_error($this->connection)));
-                }
-            } else {
-                $error = socket_last_error($this->connection);
-                socket_clear_error($this->connection);
-                error_log('error: ' . $error);
-                switch ($error) {
-                    case SOCKET_EADDRINUSE:
-                        // если сокет уже открыт - пробуем его закрыть и снова открыть
-                        // @TODO socket close self::socket_close();
-                        // @todo recheck this code
-                        // closing socket and try restart
-                        $this->close();
-                        if (!$this->_open_try) {
-                            $this->_open_try = true;
-                            return $this->_open();
-                        }
-                        break;
-                    default:
-                        throw new \Exception(socket_strerror($error));
-                }
-            }
-        }
-        // @TODO delete next line...
-        trigger_error('Server open failed', E_USER_ERROR);
-        return false;
-    }
 }

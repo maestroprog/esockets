@@ -30,15 +30,10 @@ class Client extends Net
         return $this->connected ?: $this->_connect();
     }
 
-    public function close()
+    public function disconnect()
     {
-        parent::close();
+        parent::disconnect();
         $this->connected = false;
-    }
-
-    public function doDisconnect()
-    {
-        $this->close();
     }
 
     public function onDisconnect(callable $callback)
@@ -66,7 +61,7 @@ class Client extends Net
                     case SOCKET_ECONNREFUSED:
                     case SOCKET_ENOENT:
                         // если отсутствует файл сокета, либо соединиться со слушающим сокетом не удалось - возвращаем false
-                        $this->close();
+                        $this->disconnect();
                         return false;
                     default:
                         // в иных случаях кидаем необрабатываемое исключение

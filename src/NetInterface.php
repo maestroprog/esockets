@@ -46,12 +46,6 @@ interface NetInterface
     public function send($data);
 
     /**
-     * @return
-     * пингует соединение
-     */
-    public function ping();
-
-    /**
      * @return mixed
      * функция, обеспечивающая жизнь сокету
      * что делает:
@@ -75,15 +69,4 @@ interface NetInterface
      */
     public function onRead(callable $callback);
 
-    /**
-     * @return mixed
-     * отвечает на поступающие пинги
-     */
-    function onPing($data);
-
-    /**
-     * @return mixed
-     * получает ответ на пинг
-     */
-    function onPong($msg);
 }

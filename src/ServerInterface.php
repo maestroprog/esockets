@@ -14,6 +14,24 @@ interface ServerInterface extends NetInterface
 
     /**
      * @return mixed
+     * открывает входящее соединение
+     */
+    public function connect();
+
+    /**
+     * @return bool
+     * закрывает входящее соединение
+     */
+    public function disconnect();
+
+    /**
+     * @return mixed
+     * отключает всех пиров
+     */
+    public function disconnectAll();
+
+    /**
+     * @return mixed
      * слушает входящие соединения
      */
     public function listen();
@@ -43,12 +61,6 @@ interface ServerInterface extends NetInterface
      * назначает событие при отсоединении пира
      */
     public function onDisconnectPeer(callable $callback);
-
-    /**
-     * @return mixed
-     * отключает всех пиров
-     */
-    public function disconnectAll();
 
     /**
      * @param callable $callback

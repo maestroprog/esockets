@@ -24,47 +24,53 @@ interface NetInterface
     /**
      * @return bool
      * соединяет с сетью
+     * вовзаращает true при успешном соединении, false при сбое
      */
     public function connect();
 
     /**
-     * @return bool
      * отсоединяет от сети
      */
     public function disconnect();
 
     /**
-     * @return mixed
      * читает поступившие данные из сети
+     * послушный метод, ничего не возвращает,
+     * при чтении вызывает обработчик события, назначенное в onRead()
      */
     public function read();
 
     /**
      * @return bool
-     * отправляет данные в сеть
+     * отправляет пакет данных в сеть
+     * возвращает true при успешной отправке, false при сбое
      */
     public function send($data);
 
     /**
-     * @return mixed
+     * @return bool
      * функция, обеспечивающая жизнь сокету
      * что делает:
      * - контролирует текущее состояние соединения
-     * - проверяет связь через установленные промежутки времени
-     * - выполняет переподключение на установленные промежутки времени при тайм-ауте проверки связи
+     * - проверяет связь с заданным интервалом
+     * - выполняет чтение входящих данных
+     * - выполняет переподключение при обрыве связи
+     * возвращает true, если сокет жив, false если не работает
+     * можно использовать в бесконечном цикле
+     * while (Net->live()) {
+     *  Net->send(data);
+     * }
      */
     function live();
 
     /**
      * @param callable $callback
-     * @return mixed
      * назначает событие при отсоединении
      */
     public function onDisconnect(callable $callback);
 
     /**
      * @param callable $callback
-     * @return mixed
      * назначает событие при чтении данных
      */
     public function onRead(callable $callback);

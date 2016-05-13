@@ -13,59 +13,58 @@ interface ServerInterface extends NetInterface
 {
 
     /**
-     * @return mixed
+     * @return bool
      * открывает входящее соединение
+     * возвращает true при успешном открытии, false при сбое
      */
     public function connect();
 
     /**
-     * @return bool
      * закрывает входящее соединение
      */
     public function disconnect();
 
     /**
-     * @return mixed
      * отключает всех пиров
      */
     public function disconnectAll();
 
     /**
-     * @return mixed
      * слушает входящие соединения
+     * вызывает обработчик события, заданный в onConnectPeer()
      */
     public function listen();
 
     /**
-     * @return mixed
      * читает входные данные от всех пиров по очереди
      */
     public function read();
 
     /**
-     * @return mixed
-     * отправляет данные всем пирам по очереди
+     * @return int
+     * отправляет пакет данных всем пирам по очереди
+     * возвращает количество успешно отправленных пакетов
      */
     public function send($data);
 
     /**
      * @param callable $callback
-     * @return mixed
      * назначает событие соединения клиента
      */
     public function onConnectPeer(callable $callback);
 
     /**
      * @param callable $callback
-     * @return mixed
      * назначает событие при отсоединении пира
      */
     public function onDisconnectPeer(callable $callback);
 
     /**
      * @param callable $callback
-     * @return mixed
      * назначает событие при отсоединении всех пиров
+     *
+     * событие вызывается после вызоыва onDisconnectPeer
+     * при отсоединении последнего подключенного пира
      */
     public function onDisconnectAll(callable $callback);
 }

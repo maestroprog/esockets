@@ -24,6 +24,8 @@ abstract class Net implements NetInterface
 
     const SOCKET_TIMEOUT = 30;
 
+    const SOCKET_RECONNECT = 10; // 30s ожидание перед переподключением
+
     /**
      * @var int type of socket
      */
@@ -40,6 +42,12 @@ abstract class Net implements NetInterface
     protected $socket_port = 8082;
 
     /**
+     * @var bool
+     * automatic reconnect socket for connection broken
+     */
+    protected $socket_reconnect = false;
+
+    /**
      * @var resource of socket connection
      */
     protected $connection;
@@ -48,11 +56,6 @@ abstract class Net implements NetInterface
      * @var array user-defined variables and flags of the connection
      */
     protected $vars = [];
-
-    /**
-     * @var array safe variable for user-setting
-     */
-    protected $vars_safe = [];
 
 
     /* event variables */
@@ -84,17 +87,6 @@ abstract class Net implements NetInterface
 
     /**
      * @param $name
-     * @param $value
-     * set user variable
-     */
-    public function set($name, $value)
-    {
-        if (in_array($name, $this->vars_safe))
-            $this->vars[$name] = $value;
-    }
-
-    /**
-     * @param $name
      * @return bool
      * get user variable
      */
@@ -103,7 +95,26 @@ abstract class Net implements NetInterface
         return isset($this->vars[$name]) ? $this->vars[$name] : null;
     }
 
+    /**
+     * @param $name
+     * @param $value
+     * set user variable
+     */
+    public function set($name, $value)
+    {
+        $this->vars[$name] = $value;
+    }
+
+    /**
+     * @return bool
+     */
     abstract public function connect();
+
+    /**
+     * @return bool
+     * возвращает true, если соединение включено, false в противном случае
+     */
+    abstract public function is_connected();
 
     public function disconnect()
     {
@@ -226,7 +237,27 @@ abstract class Net implements NetInterface
 
     public function live()
     {
+        $this->read();
+        if ($this->is_connected()) {
+            $this->live_checked();
+            if (($this->get('live_last_ping') + self::SOCKET_TIMEOUT * 2) <= time())
+                $this->ping() && $this->live_checked('live_last_ping'); // иногда пингуем соединение
+        } elseif ($this->socket_reconnect && $this->get('live_last_check') + self::SOCKET_TIMEOUT > time()) {
+            if ($this->get('live_last_reconnect') + self::SOCKET_RECONNECT <= time()) {
+                if ($this->connect())
+                    $this->live_checked();
+            } else {
+                $this->live_checked('live_last_reconnect');
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
 
+    private function live_checked($key = 'live_last_check')
+    {
+        $this->set('live_last_check', time());
     }
 
     abstract protected function _onDisconnect();
@@ -281,7 +312,7 @@ abstract class Net implements NetInterface
                         break;
                     case SOCKET_EPIPE:
                     case SOCKET_ENOTCONN:
-                        $this->_onDisconnect();
+                        $this->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
                         return false;
                     default:
                         error_log('SOCKET READ ERROR!!!' . socket_last_error($this->connection) . ':' . socket_strerror(socket_last_error($this->connection)));
@@ -342,7 +373,7 @@ abstract class Net implements NetInterface
                         break;
                     case SOCKET_EPIPE:
                     case SOCKET_ENOTCONN:
-                        $this->_onDisconnect();
+                        $this->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
                         break;
                     default:
                         error_log('SOCKET WRITE ERROR!!!' . socket_last_error($this->connection));

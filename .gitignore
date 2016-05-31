@@ -8,3 +8,4 @@
 out
 gen
 *.log
+phpunit.phar

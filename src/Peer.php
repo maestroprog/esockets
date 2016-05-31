@@ -43,6 +43,19 @@ class Peer extends Net
         return false;
     }
 
+    public function connect()
+    {
+        // метод-заглушка
+        // TODO: Implement connect() method.
+    }
+
+    public function is_connected()
+    {
+        return $this->connected;
+        // TODO: Implement is_connected() method.
+    }
+
+
     public function disconnect()
     {
         parent::disconnect();

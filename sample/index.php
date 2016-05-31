@@ -5,7 +5,7 @@
  * Date: 12.12.2015
  * Time: 18:10
  */
-
+/*
 spl_autoload_register(function ($class) {
     $parts = explode('\\', $class);
 
@@ -19,8 +19,9 @@ spl_autoload_register(function ($class) {
     if ($file !== false) {
         require $file;
     }
-});
+});*/
 
+require '../autoload.php';
 
 define('INTERVAL', 1000); // 1ms
 
@@ -78,16 +79,16 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline, array $errconte
 });
 
 $server = new \Esockets\Server();
-if (!$server->open()) {
+if (!$server->connect()) {
     echo ' Не удалось запустить сервер! <br>' . PHP_EOL;
     exit;
 }
-$server->onAccept(function ($peer) {
+$server->onConnectPeer(function ($peer) {
     /**
      * @var $peer \Esockets\Peer
      */
     error_log(' Принял ' . $peer->getAddress() . ' !');
-    $peer->onReceive(function ($msg) use ($peer) {
+    $peer->onRead(function ($msg) use ($peer) {
         /**
          * @var $this \Esockets\Peer
          */
@@ -106,14 +107,14 @@ if ($client->connect()) {
 $client->onDisconnect(function () {
     error_log('Меня отсоединили или я сам отсоединился!');
 });
-$client->onReceive(function ($msg) {
+$client->onRead(function ($msg) {
     error_log('Получил что то: ' . $msg . ' !');
 });
 
 $work = new \Esockets\WorkManager();
-$work->addWork('serverAccept', [$server, 'doAccept'], [], ['always' => true, 'interval' => 5000]);
-$work->addWork('serverReceive', [$server, 'doReceive'], [], ['always' => true, 'interval' => 1000]);
-$work->addWork('clientReceive', [$client, 'doReceive'], [], ['always' => true, 'interval' => 1000]);
+$work->addWork('serverAccept', [$server, 'listen'], [], ['always' => true, 'interval' => 5000]);
+$work->addWork('serverReceive', [$server, 'read'], [], ['always' => true, 'interval' => 1000]);
+$work->addWork('clientReceive', [$client, 'read'], [], ['always' => true, 'interval' => 1000]);
 
 $work->execWork();
 
@@ -130,7 +131,7 @@ for ($i = 0; $i < 2; $i++) {
 }
 $work->deleteWork('serverReceive');
 
-$server->close();
+$server->disconnect();
 
 for ($i = 0; $i < 2; $i++) {
     $work->execWork();

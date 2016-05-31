@@ -27,7 +27,12 @@ class Client extends Net
 
     public function connect()
     {
-        return $this->connected ?: $this->_connect();
+        return $this->is_connected() ?: $this->_connect();
+    }
+
+    public function is_connected()
+    {
+        return $this->connected;
     }
 
     public function disconnect()

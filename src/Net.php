@@ -1,6 +1,6 @@
 <?php
 /**
- ** Net code snippet
+ ** Net common class.
  *
  * Created by PhpStorm.
  * User: Руслан
@@ -315,7 +315,13 @@ abstract class Net implements NetInterface
                         $this->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
                         return false;
                     default:
-                        error_log('SOCKET READ ERROR!!!' . socket_last_error($this->connection) . ':' . socket_strerror(socket_last_error($this->connection)));
+                        error_log(
+                            'SOCKET READ ERROR!!!'
+                            . socket_last_error($this->connection)
+                            . ':' . socket_strerror(socket_last_error($this->connection))
+                        );
+                        // todo это временно нужно для сбора инфы о том, какие ошибы бывают, и что с ними делать.
+                        // p.s. конечно лучше почитать хороший мануальчик, чем плясать с бубном.
                         return false;
                     //throw new \Exception('Socket read error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
                 }
@@ -377,7 +383,10 @@ abstract class Net implements NetInterface
                         break;
                     default:
                         error_log('SOCKET WRITE ERROR!!!' . socket_last_error($this->connection));
-                        throw new \Exception('Socket write error: ' . socket_strerror(socket_last_error($this->connection)), socket_last_error($this->connection));
+                        throw new \Exception(
+                            'Socket write error: ' . socket_strerror(socket_last_error($this->connection)),
+                            socket_last_error($this->connection)
+                        );
                 }
                 return false;
             } elseif ($wrote === 0) {

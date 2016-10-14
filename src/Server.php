@@ -16,7 +16,7 @@ class Server extends Net implements ServerInterface
     /* server variables */
 
     /**
-     * @var array Peer
+     * @var Peer[]
      */
     protected $connections = [];
 
@@ -171,6 +171,21 @@ class Server extends Net implements ServerInterface
         }
     }
 
+    public function select()
+    {
+        $sockets = [$this->connection];
+        foreach ($this->connections as $peer) {
+            $sockets[] = $peer->getConnection();
+        }
+        $write = [];
+        $except = [];
+        var_dump($sockets);
+        if (false === ($rc = socket_select($sockets, $write, $except, null))) {
+            error_log('socket_select failed!');
+        }
+        var_dump($rc, $sockets, $write, $except);
+    }
+
     /**
      * @param callable $callback
      */
@@ -233,5 +248,10 @@ class Server extends Net implements ServerInterface
     public function onDisconnectAll(callable $callback)
     {
         // TODO: Implement onDisconnectAll() method.
+    }
+
+    public function getConnectedCount()
+    {
+        return count($this->connections);
     }
 }

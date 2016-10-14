@@ -9,19 +9,18 @@
 require 'common.php';
 
 $server = new \Esockets\Server();
-$server->open();
-if (!$server->open()) {
+if (!$server->connect()) {
     echo 'Не удалось запустить сервер!<br>' . PHP_EOL;
     exit;
 } else {
     echo 'Сервер слушает сокет<br>' . PHP_EOL;
 }
-$server->onAccept(function ($peer) {
+$server->onConnectPeer(function ($peer) {
     /**
      * @var $peer \Esockets\Peer
      */
     \Esockets\error_log(' Принял ' . $peer->getAddress() . ' !');
-    $peer->onReceive(function ($msg) use ($peer) {
+    $peer->onRead(function ($msg) use ($peer) {
         /**
          * @var $this \Esockets\Peer
          */
@@ -34,8 +33,8 @@ $server->onAccept(function ($peer) {
 
 while (true) {
 
-    $server->doAccept(); // принимаем новые соединения
-    $server->doReceive(); // принимаем новые сообщения
+    $server->listen(); // принимаем новые соединения
+    $server->read(); // принимаем новые сообщения
     if (time() % 3 === 0) {
         $server->ping();
     }

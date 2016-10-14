@@ -15,7 +15,7 @@ if ($client->connect()) {
 $client->onDisconnect(function () {
     \Esockets\error_log('Меня отсоединили или я сам отсоединился!');
 });
-$client->onReceive(function ($msg) {
+$client->onRead(function ($msg) {
     \Esockets\error_log('Получил что то: ' . $msg . ' !');
 });
 
@@ -26,12 +26,14 @@ for ($i = 1; $i > 0; $i--) {
     usleep($i*10000);
 }
 
-$client->close();
+$client->disconnect();
 unset($client);
 
 // симулируем множество клиентов
-
-$clients = array();
+/**
+ * @var $clients \Esockets\Peer[]
+ */
+$clients = [];
 for ($i = 0; $i < 1; $i++) {
 
     $client = new Esockets\Client();
@@ -41,7 +43,7 @@ for ($i = 0; $i < 1; $i++) {
     $client->onDisconnect(function () {
         \Esockets\error_log('Меня отсоединили или я сам отсоединился!');
     });
-    $client->onReceive(function ($msg) {
+    $client->onRead(function ($msg) {
         \Esockets\error_log('Получил что то: ' . $msg . ' !');
     });
     $clients[$i] = $client;
@@ -56,5 +58,5 @@ for ($i = 0; $i < 1; $i++) {
 
 // отключаем всех клиентов
 foreach ($clients as $client) {
-    $client->close();
+    $client->disconnect();
 }

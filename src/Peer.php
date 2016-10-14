@@ -90,4 +90,8 @@ class Peer extends Net
         return $this->dsc;
     }
 
+    public function getConnection()
+    {
+        return $this->connection;
+    }
 }

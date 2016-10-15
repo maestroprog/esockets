@@ -6,7 +6,7 @@
  * Time: 21:26
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
 use TestEnvironment as Env;
 

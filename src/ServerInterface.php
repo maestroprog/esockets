@@ -6,7 +6,7 @@
  * Time: 8:35
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
 
 interface ServerInterface extends NetInterface

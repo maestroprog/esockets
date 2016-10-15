@@ -6,7 +6,7 @@
  * Time: 13:04
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
 
 interface NetInterface

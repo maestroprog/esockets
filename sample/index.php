@@ -8,19 +8,19 @@
 
 require_once 'server-client/common.php';
 
-$server = new \Esockets\Server();
+$server = new \maestroprog\esockets\Server();
 if (!$server->connect()) {
     echo ' Не удалось запустить сервер! <br>' . PHP_EOL;
     exit;
 }
 $server->onConnectPeer(function ($peer) {
     /**
-     * @var $peer \Esockets\Peer
+     * @var $peer \maestroprog\esockets\Peer
      */
     error_log(' Принял ' . $peer->getAddress() . ' !');
     $peer->onRead(function ($msg) use ($peer) {
         /**
-         * @var $this \Esockets\Peer
+         * @var $this \maestroprog\esockets\Peer
          */
         error_log(' Получил от ' . $peer->getAddress() . $msg . ' !');
     });
@@ -30,7 +30,7 @@ $server->onConnectPeer(function ($peer) {
 });
 
 
-$client = new Esockets\Client();
+$client = new maestroprog\esockets\Client();
 if ($client->connect()) {
     error_log('успешно соединился!');
 }
@@ -41,7 +41,7 @@ $client->onRead(function ($msg) {
     error_log('Получил что то: ' . $msg . ' !');
 });
 
-$work = new \Esockets\WorkManager();
+$work = new \maestroprog\esockets\WorkManager();
 $work->addWork('serverAccept', [$server, 'listen'], [], ['always' => true, 'interval' => 5000]);
 $work->addWork('serverReceive', [$server, 'read'], [], ['always' => true, 'interval' => 1000]);
 $work->addWork('clientReceive', [$client, 'read'], [], ['always' => true, 'interval' => 1000]);

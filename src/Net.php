@@ -8,7 +8,7 @@
  * Time: 20:42
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
 
 function error_log($msg)

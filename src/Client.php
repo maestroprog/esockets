@@ -8,7 +8,7 @@
  * Time: 8:55
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
 
 class Client extends Net

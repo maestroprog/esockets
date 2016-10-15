@@ -8,15 +8,15 @@
 
 require 'common.php';
 
-$client = new Esockets\Client();
+$client = new maestroprog\esockets\Client();
 if ($client->connect()) {
-    \Esockets\error_log('успешно соединился!');
+    \maestroprog\esockets\error_log('успешно соединился!');
 }
 $client->onDisconnect(function () {
-    \Esockets\error_log('Меня отсоединили или я сам отсоединился!');
+    \maestroprog\esockets\error_log('Меня отсоединили или я сам отсоединился!');
 });
 $client->onRead(function ($msg) {
-    \Esockets\error_log('Получил что то: ' . $msg . ' !');
+    \maestroprog\esockets\error_log('Получил что то: ' . $msg . ' !');
 });
 
 // симулируем увеличение нагрузки
@@ -31,20 +31,20 @@ unset($client);
 
 // симулируем множество клиентов
 /**
- * @var $clients \Esockets\Peer[]
+ * @var $clients \maestroprog\esockets\Peer[]
  */
 $clients = [];
 for ($i = 0; $i < 1; $i++) {
 
-    $client = new Esockets\Client();
+    $client = new maestroprog\esockets\Client();
     if ($client->connect()) {
-        \Esockets\error_log('успешно соединился!');
+        \maestroprog\esockets\error_log('успешно соединился!');
     }
     $client->onDisconnect(function () {
-        \Esockets\error_log('Меня отсоединили или я сам отсоединился!');
+        \maestroprog\esockets\error_log('Меня отсоединили или я сам отсоединился!');
     });
     $client->onRead(function ($msg) {
-        \Esockets\error_log('Получил что то: ' . $msg . ' !');
+        \maestroprog\esockets\error_log('Получил что то: ' . $msg . ' !');
     });
     $clients[$i] = $client;
     usleep(100000);

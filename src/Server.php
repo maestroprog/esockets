@@ -8,7 +8,7 @@
  * Time: 19:48
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
 
 class Server extends Net implements ServerInterface
@@ -122,7 +122,7 @@ class Server extends Net implements ServerInterface
 
         foreach ($this->connections as $index => $peer) {
             /**
-             * @var $peer \Esockets\Peer
+             * @var $peer \maestroprog\esockets\Peer
              */
             $peer->disconnect();
             unset($this->connections[$index], $peer);
@@ -153,7 +153,7 @@ class Server extends Net implements ServerInterface
         $ok = true;
         foreach ($this->connections as $peer) {
             /**
-             * @var $peer \Esockets\Peer
+             * @var $peer \maestroprog\esockets\Peer
              */
             $ok &= $peer->send($data);
         }
@@ -165,7 +165,7 @@ class Server extends Net implements ServerInterface
         error_log('Пингуем пиров');
         foreach ($this->connections as $peer) {
             /**
-             * @var $peer \Esockets\Peer
+             * @var $peer \maestroprog\esockets\Peer
              */
             $peer->ping();
         }

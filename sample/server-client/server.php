@@ -8,7 +8,7 @@
 
 require 'common.php';
 
-$server = new \Esockets\Server();
+$server = new \maestroprog\esockets\Server();
 if (!$server->connect()) {
     echo 'Не удалось запустить сервер!<br>' . PHP_EOL;
     exit;
@@ -17,17 +17,17 @@ if (!$server->connect()) {
 }
 $server->onConnectPeer(function ($peer) {
     /**
-     * @var $peer \Esockets\Peer
+     * @var $peer \maestroprog\esockets\Peer
      */
-    \Esockets\error_log(' Принял ' . $peer->getAddress() . ' !');
+    \maestroprog\esockets\error_log(' Принял ' . $peer->getAddress() . ' !');
     $peer->onRead(function ($msg) use ($peer) {
         /**
-         * @var $this \Esockets\Peer
+         * @var $this \maestroprog\esockets\Peer
          */
-        \Esockets\error_log(' Получил от ' . $peer->getAddress() . $msg . ' !');
+        \maestroprog\esockets\error_log(' Получил от ' . $peer->getAddress() . $msg . ' !');
     });
     $peer->onDisconnect(function () use ($peer) {
-        \Esockets\error_log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
+        \maestroprog\esockets\error_log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
     });
 });
 

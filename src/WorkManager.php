@@ -6,7 +6,7 @@
  * Time: 20:18
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
 
 interface WorkManagerInterface
@@ -38,7 +38,7 @@ interface WorkManagerInterface
 
 /**
  * Class WorkManager
- * @package Esockets
+ * @package maestroprog\esockets
  *
  * Вспомогательный класс для работы как с серверной, так и с клиентской частью сокетов
  */

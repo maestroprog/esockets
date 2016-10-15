@@ -20,17 +20,17 @@ if (file_exists('phpunit.log')) unlink('phpunit.log');
 class TestEnvironment
 {
     /**
-     * @var \Esockets\Server
+     * @var \maestroprog\esockets\Server
      */
     public static $server;
 
     /**
-     * @var \Esockets\Client
+     * @var \maestroprog\esockets\Client
      */
     public static $client;
 
     /**
-     * @var \Esockets\Peer
+     * @var \maestroprog\esockets\Peer
      */
     public static $peer;
 }

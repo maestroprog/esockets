@@ -15,25 +15,25 @@ $config = [
     'socket_port' => '8082', // прослушиваемый порт для входящих соединений (для AF_UNIX)
     'socket_reconnect' => false, // true для автоматического переподключения при обрыве соединения.
 ];
-$server = new \Esockets\Server($config);
+$server = new \maestroprog\esockets\Server($config);
 if (!$server->connect()) {
     echo 'Не удалось запустить сервер!';
     exit;
 }
-$client = new Esockets\Client($config); // передаем конфигурацию, такую же, как для сервера
+$client = new maestroprog\esockets\Client($config); // передаем конфигурацию, такую же, как для сервера
 if ($client->connect()) {
     error_log('успешно соединился!');
 }
 // назначаем обработчик для новых входящих соединений. при соединении клиента к серверу будет вызван переданный обработчик
 $server->onConnectPeer(function ($peer) {
     /**
-     * @var $peer \Esockets\Peer
+     * @var $peer \maestroprog\esockets\Peer
      */
     error_log('Принял входящее соединение ' . $peer->getAddress() . ' !');
     // назначаем обработчик для чтения данных от присоединившегося клиента. при получении данных от подключенного клиента будет вызван переданный обработчик
     $peer->onRead(function ($msg) use ($peer) {
         /**
-         * @var $this \Esockets\Peer
+         * @var $this \maestroprog\esockets\Peer
          */
         error_log('Получил сообщение от ' . $peer->getAddress() . ' ' . $msg . ' !');
     });

@@ -11,6 +11,8 @@
 namespace maestroprog\esockets;
 
 
+use maestroprog\esockets\base\Net;
+
 class Peer extends Net
 {
     /**
@@ -88,10 +90,5 @@ class Peer extends Net
     public function getDsc()
     {
         return $this->dsc;
-    }
-
-    public function getConnection()
-    {
-        return $this->connection;
     }
 }

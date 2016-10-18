@@ -11,6 +11,9 @@
 namespace maestroprog\esockets;
 
 
+use maestroprog\esockets\base\Net;
+use maestroprog\esockets\base\ServerInterface;
+
 class Server extends Net implements ServerInterface
 {
     /* server variables */
@@ -82,7 +85,7 @@ class Server extends Net implements ServerInterface
                         $this->disconnect();
                         if (!$this->_open_try) {
                             $this->_open_try = true;
-                            return $this->open();
+                            return $this->connect();
                         }
                         break;
                     default:

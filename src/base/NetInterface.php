@@ -6,20 +6,11 @@
  * Time: 13:04
  */
 
-namespace maestroprog\esockets;
+namespace maestroprog\esockets\base;
 
 
 interface NetInterface
 {
-    const DATA_RAW = 0;
-    const DATA_JSON = 1;
-    const DATA_INT = 2;
-    const DATA_FLOAT = 4;
-    const DATA_STRING = 8;
-    const DATA_ARRAY = 16;
-    const DATA_EXTENDED = 32; // reserved for objects
-    const DATA_PING_PONG = 64; // reserved
-    const DATA_CONTROL = 128;
 
     /**
      * @return bool

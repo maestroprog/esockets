@@ -11,6 +11,8 @@
 namespace maestroprog\esockets;
 
 
+use maestroprog\esockets\base\Net;
+
 class Client extends Net
 {
     /**

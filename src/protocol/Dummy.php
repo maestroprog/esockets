@@ -8,39 +8,24 @@
 
 namespace maestroprog\esockets\protocol;
 
-use maestroprog\esockets\Protocol;
+use maestroprog\esockets\protocol\base\ProtocolUseIO;
 
-class Dummy implements Protocol
+class Dummy extends ProtocolUseIO
 {
     /**
      * @inheritdoc
      */
-    function read(bool $createEvent, bool $need = false): mixed
+    function read(bool $need = false): mixed
     {
-        // TODO: Implement read() method.
+        // @todo проверить что будет с 0
+        return $this->provider->read(0, $need);
     }
 
     /**
      * @inheritdoc
      */
-    function send(mixed $data): bool
+    function send(mixed &$data): bool
     {
-        // TODO: Implement send() method.
-    }
-
-    /**
-     * @inheritdoc
-     */
-    function pack(mixed $data): string
-    {
-        return (string)$data;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    function unpack(string $raw): mixed
-    {
-        return $raw;
+        return $this->provider->send($data);
     }
 }

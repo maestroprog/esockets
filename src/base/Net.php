@@ -114,6 +114,8 @@ abstract class Net implements NetInterface
      */
     abstract public function is_connected();
 
+    //abstract public function createIO();
+
     public function disconnect()
     {
         if ($this->connection) {
@@ -147,10 +149,14 @@ abstract class Net implements NetInterface
                 error_log('PING FAIL!');
             }
         };
-        $this->_send($data, self::DATA_INT | self::DATA_PING_PONG);
+        $this->_send($data, self::DATA_INT | self::DATA_PING_PONG); // todo
         error_log('ping sended');
     }
 
+    /**
+     * @todo допилить
+     * @return bool
+     */
     public function live()
     {
         $this->read();
@@ -173,7 +179,7 @@ abstract class Net implements NetInterface
 
     private function live_checked($key = 'live_last_check')
     {
-        $this->set('live_last_check', time());
+        $this->set($key, time());
     }
 
     abstract protected function _onDisconnect();
@@ -204,6 +210,8 @@ abstract class Net implements NetInterface
     }
 
     /**
+     * @todo
+     * @deprecated
      * @param $length
      * @param bool $required
      * @return bool|string
@@ -214,6 +222,8 @@ abstract class Net implements NetInterface
     }
 
     /**
+     * @todo
+     * @deprecated
      * @param $data
      * @param int $flag
      * @return bool

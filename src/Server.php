@@ -178,6 +178,7 @@ class Server extends Net implements ServerInterface
     {
         $sockets = [$this->connection];
         foreach ($this->connections as $peer) {
+            // todo а нужно ли это?
             $sockets[] = $peer->getConnection();
         }
         $write = [];

@@ -7,6 +7,7 @@
  */
 
 namespace maestroprog\esockets\io;
+
 use maestroprog\esockets\base\Net;
 use maestroprog\esockets\io\base\IOMiddleware;
 use maestroprog\esockets\protocol\base\ProtocolAware;
@@ -17,13 +18,19 @@ class Socket extends IOMiddleware
     const SOCKET_WAIT = 1;
 
     /**
-     * @var resource of socket
+     * @var Net
      */
     private $connection;
+
+    /**
+     * @var resource of socket
+     */
+    private $socket;
 
     public function __construct(Net $connection, ProtocolAware $provider)
     {
         $this->connection = $connection;
+        $this->socket = $connection->getConnection();
     }
 
     public function read(int $length, bool $need = false): mixed
@@ -31,7 +38,7 @@ class Socket extends IOMiddleware
         $buffer = '';
         $try = 0;
         while ($length > 0) {
-            $data = socket_read($this->connection, $length);
+            $data = socket_read($this->socket, $length);
             error_log('data is ' . var_export($data, true) . ' from ' . get_class($this));
             if ($data === false || $data === '') {
                 switch (socket_last_error($this->connection)) {
@@ -45,7 +52,7 @@ class Socket extends IOMiddleware
                         break;
                     case SOCKET_EPIPE:
                     case SOCKET_ENOTCONN:
-                        $this->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
+                        $this->connection->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
                         return false;
                     default:
                         error_log(
@@ -88,7 +95,7 @@ class Socket extends IOMiddleware
         $length = strlen($data);
         $written = 0;
         do {
-            $wrote = socket_write($this->connection, $data);
+            $wrote = socket_write($this->socket, $data);
             if ($wrote === false) {
                 /**
                  * @TODO как и при чтении, необходимо протестировать работу socket_write
@@ -103,7 +110,7 @@ class Socket extends IOMiddleware
                         break;
                     case SOCKET_EPIPE:
                     case SOCKET_ENOTCONN:
-                        $this->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
+                        $this->connection->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
                         break;
                     default:
                         error_log('SOCKET WRITE ERROR!!!' . socket_last_error($this->connection));

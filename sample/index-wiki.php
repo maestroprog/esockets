@@ -22,24 +22,24 @@ if (!$server->connect()) {
 }
 $client = new maestroprog\esockets\Client($config); // передаем конфигурацию, такую же, как для сервера
 if ($client->connect()) {
-    error_log('успешно соединился!');
+    \maestroprog\esockets\debug\Log::log('успешно соединился!');
 }
 // назначаем обработчик для новых входящих соединений. при соединении клиента к серверу будет вызван переданный обработчик
 $server->onConnectPeer(function ($peer) {
     /**
      * @var $peer \maestroprog\esockets\Peer
      */
-    error_log('Принял входящее соединение ' . $peer->getAddress() . ' !');
+    \maestroprog\esockets\debug\Log::log('Принял входящее соединение ' . $peer->getAddress() . ' !');
     // назначаем обработчик для чтения данных от присоединившегося клиента. при получении данных от подключенного клиента будет вызван переданный обработчик
     $peer->onRead(function ($msg) use ($peer) {
         /**
          * @var $this \maestroprog\esockets\Peer
          */
-        error_log('Получил сообщение от ' . $peer->getAddress() . ' ' . $msg . ' !');
+        \maestroprog\esockets\debug\Log::log('Получил сообщение от ' . $peer->getAddress() . ' ' . $msg . ' !');
     });
     // назначаем обработчик для отсоединения клиента от сервера. этот обработчик будет вызван при отсоединении клиента
     $peer->onDisconnect(function () use ($peer) {
-        error_log('Клиент ' . $peer->getAddress() . ' отсоединился от сервера');
+        \maestroprog\esockets\debug\Log::log('Клиент ' . $peer->getAddress() . ' отсоединился от сервера');
     });
 });
 

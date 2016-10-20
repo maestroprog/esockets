@@ -40,15 +40,8 @@ class Peer extends Net
             $this->connected = true;
             $this->dsc = $dsc;
             parent::__construct();
-            return $this;
+            parent::connect();
         }
-        return false;
-    }
-
-    public function connect()
-    {
-        // метод-заглушка
-        // TODO: Implement connect() method.
     }
 
     public function is_connected()
@@ -60,8 +53,8 @@ class Peer extends Net
 
     public function disconnect()
     {
+        $this->connected = false; // как только начали дисконнектиться-ставим флаг
         parent::disconnect();
-        $this->connected = false;
     }
 
     public function onDisconnect(callable $callback)
@@ -80,7 +73,7 @@ class Peer extends Net
     public function getAddress()
     {
         $address = $port = null;
-        if (socket_getpeername($this->connection, $address, $port)) {
+        if ($this->connected && socket_getpeername($this->connection, $address, $port)) {
             return $address . ':' . $port;
         } else {
             return 'Unknown';

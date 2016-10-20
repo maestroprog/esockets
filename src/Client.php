@@ -39,8 +39,8 @@ class Client extends Net
 
     public function disconnect()
     {
+        $this->connected = false; // как только начали дисконнектиться - тоже ставим флаг
         parent::disconnect();
-        $this->connected = false;
     }
 
     public function onDisconnect(callable $callback)
@@ -60,6 +60,7 @@ class Client extends Net
         if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $this->socket_domain > 1 ? getprotobyname('tcp') : 0)) {
             if (socket_connect($this->connection, $this->socket_address, $this->socket_port)) {
                 $this->setNonBlock();// $this->connection); // устанавливаем неблокирующий режим работы сокета
+                parent::connect();
                 return $this->connected = true;
             } else {
                 $error = socket_last_error($this->connection);

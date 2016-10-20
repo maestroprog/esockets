@@ -8,11 +8,20 @@
 
 namespace maestroprog\esockets\protocol\base;
 
-use maestroprog\esockets\io\base\IOAware;
+use maestroprog\esockets\io\base\Aware as IOAware;
 
-interface ProtocolAware
+/**
+ * Интерфейс, показывающий возможности обмена информацией между клиентами сети.
+ */
+interface Aware
 {
-    public function __construct(IOAware $IOProvider);
+    /**
+     * Для создания класса нам потребуется поставщик ввода/вывода.
+     *
+     * Aware constructor.
+     * @param IOAware $Provider
+     */
+    public function __construct(IOAware $Provider);
 
     /**
      * Функция пробует прочитать данные из сокета.
@@ -27,7 +36,7 @@ interface ProtocolAware
      * @param bool $need
      * @return mixed
      */
-    function read(bool $need = false): mixed;
+    function read(bool $need = false);
 
     /**
      * Функция отправляет данные через сокет.
@@ -36,5 +45,5 @@ interface ProtocolAware
      * @param mixed $data
      * @return bool
      */
-    function send(mixed &$data): bool;
+    function send(&$data): bool;
 }

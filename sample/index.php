@@ -17,28 +17,28 @@ $server->onConnectPeer(function ($peer) {
     /**
      * @var $peer \maestroprog\esockets\Peer
      */
-    error_log(' Принял ' . $peer->getAddress() . ' !');
+    \maestroprog\esockets\debug\Log::log(' Принял ' . $peer->getAddress() . ' !');
     $peer->onRead(function ($msg) use ($peer) {
         /**
          * @var $this \maestroprog\esockets\Peer
          */
-        error_log(' Получил от ' . $peer->getAddress() . $msg . ' !');
+        \maestroprog\esockets\debug\Log::log(' Получил от ' . $peer->getAddress() . $msg . ' !');
     });
     $peer->onDisconnect(function () use ($peer) {
-        error_log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
+        \maestroprog\esockets\debug\Log::log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
     });
 });
 
 
 $client = new maestroprog\esockets\Client();
 if ($client->connect()) {
-    error_log('успешно соединился!');
+    \maestroprog\esockets\debug\Log::log('успешно соединился!');
 }
 $client->onDisconnect(function () {
-    error_log('Меня отсоединили или я сам отсоединился!');
+    \maestroprog\esockets\debug\Log::log('Меня отсоединили или я сам отсоединился!');
 });
 $client->onRead(function ($msg) {
-    error_log('Получил что то: ' . $msg . ' !');
+    \maestroprog\esockets\debug\Log::log('Получил что то: ' . $msg . ' !');
 });
 
 $work = new \maestroprog\esockets\WorkManager();
@@ -49,10 +49,10 @@ $work->addWork('clientReceive', [$client, 'read'], [], ['always' => true, 'inter
 $work->execWork();
 
 if ($client->send('HELLO WORLD!')) {
-    error_log('Отправил!');
+    \maestroprog\esockets\debug\Log::log('Отправил!');
 }
 if ($server->send('HELLO!')) {
-    error_log('Я тоже отправил!');
+    \maestroprog\esockets\debug\Log::log('Я тоже отправил!');
 }
 
 for ($i = 0; $i < 2; $i++) {

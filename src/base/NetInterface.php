@@ -15,6 +15,7 @@ interface NetInterface
     /**
      * @return bool
      * соединяет с сетью
+     * создаёт поставщика ввода вывода
      * вовзаращает true при успешном соединении, false при сбое
      */
     public function connect();
@@ -25,8 +26,7 @@ interface NetInterface
     public function disconnect();
 
     /**
-     * читает поступившие данные из сети
-     * послушный метод, ничего не возвращает,
+     * Читает поступившие данные из сети
      * при чтении вызывает обработчик события, назначенное в onRead()
      */
     public function read();

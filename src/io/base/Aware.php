@@ -8,13 +8,18 @@
 
 namespace maestroprog\esockets\io\base;
 
-interface IOAware
+/**
+ * Интерфейс, показывающий возможности ввода/вывода.
+ * Для обеспечения ввода-вывода необходимо его реализовать.
+ * Реализованный протокол использует данный интерфейс для омбена информацией.
+ */
+interface Aware
 {
     /**
      * Функция, предоставляющая доступ к IO для чтения.
      * Должна использоваться протокол провайдером.
      *
-     * @see ProtocolAware::read()
+     * @see Aware::read()
      * @param int $length
      * @param bool $need
      * @return mixed
@@ -28,7 +33,7 @@ interface IOAware
      *      Берём по ссылке чтобы лишний раз не копировать.
      * Возвращает true в случае успеха, иначе false.
      *
-     * @see ProtocolAware::send()
+     * @see Aware::send()
      * @param string $data
      * @return bool
      */

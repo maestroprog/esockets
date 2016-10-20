@@ -10,11 +10,11 @@
 
 namespace maestroprog\esockets\base;
 
-function error_log($msg)
-{
-    echo $msg . PHP_EOL;
-    \error_log($msg);
-}
+use maestroprog\esockets\debug\Log;
+use maestroprog\esockets\io\base\Aware;
+use maestroprog\esockets\io\base\Provider;
+use maestroprog\esockets\io\Socket;
+use maestroprog\esockets\protocol\Easy;
 
 abstract class Net implements NetInterface
 {
@@ -54,6 +54,11 @@ abstract class Net implements NetInterface
      * @var array user-defined variables and flags of the connection
      */
     protected $vars = [];
+
+    /**
+     * @var Aware
+     */
+    protected $IO;
 
 
     /* event variables */
@@ -106,7 +111,11 @@ abstract class Net implements NetInterface
     /**
      * @return bool
      */
-    abstract public function connect();
+    public function connect()
+    {
+        $this->createIO();
+        return true;
+    }
 
     /**
      * @return bool
@@ -114,7 +123,16 @@ abstract class Net implements NetInterface
      */
     abstract public function is_connected();
 
-    //abstract public function createIO();
+    /**
+     * Функция должна создавать интерфейс ввода-вывода.
+     *
+     * @return Aware
+     */
+    final public function createIO()
+    {
+        $this->IO or $this->IO = new Provider(Easy::class, new Socket($this));
+        return $this->IO;
+    }
 
     public function disconnect()
     {
@@ -128,29 +146,48 @@ abstract class Net implements NetInterface
         }
     }
 
-    public function read()
+    public function read($need = false)
     {
-
+        try {
+            if (false === ($data = $this->IO->read(0, $need))) {
+                return false;
+            } elseif (!$need && $data !== null) {
+                $this->_onRead($data);
+            } else {
+                return $data;
+            }
+        } catch (\Throwable $e) {
+            // ????? todo
+            throw $e;
+        }
+        return false;
     }
 
     public function send($data)
     {
         $this->mid++;
-
+        try {
+            return $this->IO->send($data);
+        } catch (\Throwable $e) {
+            // ????? todo
+            throw $e;
+        }
+        return false;
     }
 
     public function ping()
     {
-        $data = rand(1000, 9999);
+        // todo
+        /*$data = rand(1000, 9999);
         $this->event_pong = function ($msg) use ($data) {
             if ($msg === $data) {
-                error_log('ping corrected!');
+                \maestroprog\esockets\debug\Log::log('ping corrected!');
             } else {
-                error_log('PING FAIL!');
+                \maestroprog\esockets\debug\Log::log('PING FAIL!');
             }
         };
         $this->_send($data, self::DATA_INT | self::DATA_PING_PONG); // todo
-        error_log('ping sended');
+        \maestroprog\esockets\debug\Log::log('ping sended');*/
     }
 
     /**
@@ -234,7 +271,7 @@ abstract class Net implements NetInterface
     {
     }
 
-    public function getConnection(): resource
+    public function getConnection()
     {
         return $this->connection;
     }

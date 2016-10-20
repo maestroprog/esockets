@@ -58,6 +58,12 @@ class Server extends Net implements ServerInterface
      */
     private $_open_try = false;
 
+    /**
+     * @see parent::connect(); Серверу не нужен ввод/вывод, поэтому он не будет вызывать родительский коннект.
+     *
+     * @return bool
+     * @throws \Exception
+     */
     public function connect()
     {
         if ($this->is_connected()) return true;
@@ -75,7 +81,7 @@ class Server extends Net implements ServerInterface
             } else {
                 $error = socket_last_error($this->connection);
                 socket_clear_error($this->connection);
-                error_log('error: ' . $error);
+                \maestroprog\esockets\debug\Log::log('error: ' . $error);
                 switch ($error) {
                     case SOCKET_EADDRINUSE:
                         // если сокет уже открыт - пробуем его закрыть и снова открыть
@@ -146,7 +152,7 @@ class Server extends Net implements ServerInterface
             /**
              * @var $peer Peer
              */
-            error_log('Читаю пира ' . $peer->getDsc() . ' on adddress ' . $dsc);
+            \maestroprog\esockets\debug\Log::log('Читаю пира ' . $peer->getDsc() . ' on adddress ' . $dsc);
             $peer->read();
         }
     }
@@ -165,7 +171,7 @@ class Server extends Net implements ServerInterface
 
     public function ping()
     {
-        error_log('Пингуем пиров');
+        \maestroprog\esockets\debug\Log::log('Пингуем пиров');
         foreach ($this->connections as $peer) {
             /**
              * @var $peer \maestroprog\esockets\Peer
@@ -185,7 +191,7 @@ class Server extends Net implements ServerInterface
         $except = [];
         var_dump($sockets);
         if (false === ($rc = socket_select($sockets, $write, $except, null))) {
-            error_log('socket_select failed!');
+            \maestroprog\esockets\debug\Log::log('socket_select failed!');
         }
         var_dump($rc, $sockets, $write, $except);
     }
@@ -226,7 +232,7 @@ class Server extends Net implements ServerInterface
                 call_user_func_array($this->event_accept, [$peer]);
             }
             $peer->onDisconnect(function () use ($peer) {
-                error_log('Отсоединился пир ' . $peer->getDsc());
+                \maestroprog\esockets\debug\Log::log('Отсоединился пир ' . $peer->getDsc());
                 unset($this->connections[$peer->getDsc()]);
                 $this->_onDisconnectPeer($peer);
             });

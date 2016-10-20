@@ -8,9 +8,9 @@
 
 namespace maestroprog\esockets\protocol;
 
-use maestroprog\esockets\protocol\base\ProtocolUseIO;
+use maestroprog\esockets\protocol\base\UseIO;
 
-class Easy extends ProtocolUseIO
+class Easy extends UseIO
 {
     const DATA_RAW = 0;
     const DATA_JSON = 1;
@@ -22,18 +22,18 @@ class Easy extends ProtocolUseIO
     const DATA_PING_PONG = 64; // reserved
     const DATA_CONTROL = 128;
 
-    public function read(bool $need = false): mixed
+    public function read(bool $need = false)
     {// read message meta
         if (($data = $this->provider->read(5)) !== false) {
             list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', $data));
-            error_log('read length ' . $length);
-            error_log('flag ' . $flag);
-            error_log('read try ' . $length . ' bytes');
+            \maestroprog\esockets\debug\Log::log('read length ' . $length);
+            \maestroprog\esockets\debug\Log::log('flag ' . $flag);
+            \maestroprog\esockets\debug\Log::log('read try ' . $length . ' bytes');
             if (($data = $this->provider->read($length, true)) !== false) {
-                error_log('data retrieved');
+                \maestroprog\esockets\debug\Log::log('data retrieved');
                 $data = $this->unpack($data, $flag);
             } else {
-                error_log('cannot retrieve data');
+                \maestroprog\esockets\debug\Log::log('cannot retrieve data');
             }
         }
     }
@@ -41,7 +41,7 @@ class Easy extends ProtocolUseIO
     /**
      * @inheritdoc
      */
-    public function send(mixed &$data): bool
+    public function send(&$data): bool
     {
         if ($raw = $this->pack($data)) {
             return $this->provider->send($raw);
@@ -49,7 +49,7 @@ class Easy extends ProtocolUseIO
         return false;
     }
 
-    private function pack(mixed &$data): string
+    private function pack(&$data): string
     {
         $flag = 0;
         switch (gettype($data)) {
@@ -114,7 +114,7 @@ class Easy extends ProtocolUseIO
      * @param int $flag
      * @return mixed
      */
-    private function unpack(string &$raw, int $flag): mixed
+    private function unpack(string &$raw, int $flag)
     {
         $data = null;
         if ($flag & self::DATA_JSON) {
@@ -136,13 +136,13 @@ class Easy extends ProtocolUseIO
                 if (is_callable($this->event_pong)) {
                     call_user_func($this->event_pong, $raw);
                 } else {
-                    error_log('pong received');
+                    \maestroprog\esockets\debug\Log::log('pong received');
                 }
             }
         } elseif ($flag & self::DATA_PING_PONG) {
             // отправляем исходные данные "pong" с исходным форматом, дополнительно устанавливая флаг DATA_CONTROL
             $this->_send($raw, $flag | self::DATA_CONTROL);
-            error_log('ping received and pong sended');
+            \maestroprog\esockets\debug\Log::log('ping received and pong sended');
             return;
         }*/
         return $data;

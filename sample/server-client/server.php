@@ -8,6 +8,8 @@
 
 require 'common.php';
 
+use maestroprog\esockets\debug\Log as _;
+
 $server = new \maestroprog\esockets\Server();
 if (!$server->connect()) {
     echo 'Не удалось запустить сервер!<br>' . PHP_EOL;
@@ -19,15 +21,15 @@ $server->onConnectPeer(function ($peer) {
     /**
      * @var $peer \maestroprog\esockets\Peer
      */
-    \maestroprog\esockets\error_log(' Принял ' . $peer->getAddress() . ' !');
+    _::log(' Принял ' . $peer->getAddress() . ' !');
     $peer->onRead(function ($msg) use ($peer) {
         /**
          * @var $this \maestroprog\esockets\Peer
          */
-        \maestroprog\esockets\error_log(' Получил от ' . $peer->getAddress() . $msg . ' !');
+        _::log(' Получил от ' . $peer->getAddress() . $msg . ' !');
     });
     $peer->onDisconnect(function () use ($peer) {
-        \maestroprog\esockets\error_log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
+        _::log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
     });
 });
 

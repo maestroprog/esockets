@@ -57,10 +57,10 @@ function error_type($type)
 }
 /*
 set_exception_handler(function (Throwable $e) {
-    error_log(sprintf('Вызвана ошибка %d: %s; %s', $e->getCode(), $e->getMessage(), $e->getTraceAsString()));
+    \maestroprog\esockets\debug\Log::log(sprintf('Вызвана ошибка %d: %s; %s', $e->getCode(), $e->getMessage(), $e->getTraceAsString()));
 });
 
 set_error_handler(function ($errno, $errstr, $errfile, $errline, array $errcontext) {
-    error_log(sprintf('[%s]: %s in %s at %d line', error_type($errno), $errstr, $errfile, $errline));
+    \maestroprog\esockets\debug\Log::log(sprintf('[%s]: %s in %s at %d line', error_type($errno), $errstr, $errfile, $errline));
 });
 */

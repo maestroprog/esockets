@@ -13,7 +13,7 @@ namespace maestroprog\esockets\base;
 use maestroprog\esockets\debug\Log;
 use maestroprog\esockets\io\base\Aware;
 use maestroprog\esockets\io\base\Provider;
-use maestroprog\esockets\io\Socket;
+use maestroprog\esockets\io\TcpSocket;
 use maestroprog\esockets\protocol\Easy;
 
 abstract class Net implements NetInterface
@@ -56,7 +56,7 @@ abstract class Net implements NetInterface
     protected $vars = [];
 
     /**
-     * @var Aware
+     * @var Provider
      */
     protected $IO;
 
@@ -114,8 +114,18 @@ abstract class Net implements NetInterface
     public function connect()
     {
         $this->createIO();
+        $addr = null;
+        $port = 0;
+        socket_getsockname($this->connection, $addr, $port);
+        $this->set('my_ip', $addr);
+        $this->set('my_port', $port);
+        $this->getPeerName($addr, $port);
+        $this->set('peer_ip', $addr);
+        $this->set('peer_port', $port);
         return true;
     }
+
+    abstract protected function getPeerName(string &$addr, int &$port);
 
     /**
      * @return bool
@@ -130,7 +140,7 @@ abstract class Net implements NetInterface
      */
     final public function createIO()
     {
-        $this->IO or $this->IO = new Provider(Easy::class, new Socket($this));
+        $this->IO or $this->IO = new Provider(Easy::class, new TcpSocket($this));
         return $this->IO;
     }
 
@@ -149,7 +159,7 @@ abstract class Net implements NetInterface
     public function read($need = false)
     {
         try {
-            if (false === ($data = $this->IO->read(0, $need))) {
+            if (false === ($data = $this->IO->read($need))) {
                 return false;
             } elseif (!$need && $data !== null) {
                 $this->_onRead($data);
@@ -236,12 +246,12 @@ abstract class Net implements NetInterface
         }
     }
 
-    protected function setBlock()
+    public function setBlock()
     {
         socket_set_block($this->connection);
     }
 
-    protected function setNonBlock()
+    public function setNonBlock()
     {
         socket_set_nonblock($this->connection);
     }
@@ -274,5 +284,38 @@ abstract class Net implements NetInterface
     public function getConnection()
     {
         return $this->connection;
+    }
+
+    public function getPeerAddress(): array
+    {
+        if ($this->socket_domain === AF_INET) {
+            return [
+                $this->get('peer_ip'),
+                $this->get('peer_port')
+            ];
+        } else {
+            return [
+                $this->get('peer_address'), 0
+            ];
+        }
+    }
+
+    public function getMyAddress(): array
+    {
+        if ($this->socket_domain === AF_INET) {
+            return [
+                $this->get('my_ip'),
+                $this->get('my_port')
+            ];
+        } else {
+            return [
+                $this->get('my_address'), 0
+            ];
+        }
+    }
+
+    public function getAddress(): string
+    {
+        return implode(':', $this->getPeerAddress());
     }
 }

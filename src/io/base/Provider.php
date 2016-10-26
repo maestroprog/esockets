@@ -47,29 +47,26 @@ class Provider
     }
 
     /**
-     * Параметр $createEvent = true говорит о том, что после чтения данных
-     *      нужно создать событие, и передать туда прочтенные данные.
-     *      При $createEvent = false прочтенные данные нужно вернуть из функции.
-     *
      * @param bool $need
+     * @return mixed
      */
     public function read(bool $need = false)
     {
         if ($this->protocol) {
             return $this->protocol->read($need);
-        } else {
-            //todo зацикливалка!!!
-            //$this->read($need);
         }
+        return false;
     }
 
     /**
      * @param mixed $data
+     * @return mixed
      */
     public function send(&$data)
     {
         if ($this->protocol) {
             return $this->protocol->send($data);
         }
+        return false;
     }
 }

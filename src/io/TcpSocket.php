@@ -12,7 +12,7 @@ use maestroprog\esockets\base\Net;
 use maestroprog\esockets\debug\Log;
 use maestroprog\esockets\io\base\Middleware;
 
-class Socket extends Middleware
+class TcpSocket extends Middleware
 {
     /** Интервал времени ожидания между попытками при чтении/записи. */
     const SOCKET_WAIT = 1;
@@ -66,6 +66,7 @@ class Socket extends Middleware
         $try = 0;
         while ($length > 0) {
             $data = socket_read($this->socket, $length);
+            if ($data === false) return false;
             \maestroprog\esockets\debug\Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
             switch ($this->errorType(socket_last_error($this->socket), self::OP_READ)) {
                 case self::ERROR_NOTHING:
@@ -85,7 +86,8 @@ class Socket extends Middleware
                     }
                     break;
                 case self::ERROR_AGAIN:
-                    if (!strlen($buffer) && (!$need || $try++ > 100)) {
+                    var_dump($data);
+                    if ($data === '' && !strlen($buffer) && (!$need || $try++ > 100)) {
                         $this->connection->disconnect(); // TODO тут тоже закрыто. выяснить почему???
                         return false;
                     } else {
@@ -182,13 +184,14 @@ class Socket extends Middleware
             return self::ERROR_NOTHING;
         } elseif (isset(self::$catchableErrors[$errno])) {
             Log::log(sprintf(
-                'Socket catch error %s at %s',
+                'Socket catch error %s at %s: %d',
                 socket_strerror($errno),
-                $operation ? 'WRITING' : 'READING'
+                $operation ? 'WRITING' : 'READING',
+                $errno
             ));
             return self::$catchableErrors[$errno];
         } else {
-            Log::log(sprintf('Unknown socket error %d: %s' . $errno, socket_strerror($errno)));
+            Log::log(sprintf('Unknown socket error %d: %s', $errno, socket_strerror($errno)));
             return self::ERROR_UNKNOWN;
         }
     }

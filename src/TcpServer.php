@@ -14,7 +14,7 @@ namespace maestroprog\esockets;
 use maestroprog\esockets\base\Net;
 use maestroprog\esockets\base\ServerInterface;
 
-class Server extends Net implements ServerInterface
+class TcpServer extends Net implements ServerInterface
 {
     /* server variables */
 
@@ -69,7 +69,7 @@ class Server extends Net implements ServerInterface
         if ($this->is_connected()) return true;
 
         if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $this->socket_domain > 1 ? getprotobyname('tcp') : 0)) {
-            socket_set_option($this->connection, SOL_SOCKET, SO_REUSEADDR, true);
+            socket_set_option($this->connection, SOL_SOCKET, SO_REUSEADDR, 1);
             if (socket_bind($this->connection, $this->socket_address, $this->socket_port)) {
                 if (socket_listen($this->connection)) {
                     socket_set_nonblock($this->connection);
@@ -152,7 +152,7 @@ class Server extends Net implements ServerInterface
             /**
              * @var $peer Peer
              */
-            \maestroprog\esockets\debug\Log::log('Читаю пира ' . $peer->getDsc() . ' on adddress ' . $dsc);
+            \maestroprog\esockets\debug\Log::log('Читаю пира ' . $peer->getDsc() . ' on adddress ' . $peer->getAddress());
             $peer->read();
         }
     }
@@ -263,5 +263,11 @@ class Server extends Net implements ServerInterface
     public function getConnectedCount()
     {
         return count($this->connections);
+    }
+
+    protected function getPeerName(string &$addr, int &$port)
+    {
+        $addr = $this->socket_address;
+        $port = $this->socket_port;
     }
 }

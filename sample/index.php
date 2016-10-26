@@ -8,7 +8,7 @@
 
 require_once 'server-client/common.php';
 
-$server = new \maestroprog\esockets\Server();
+$server = new \maestroprog\esockets\TcpServer();
 if (!$server->connect()) {
     echo ' Не удалось запустить сервер! <br>' . PHP_EOL;
     exit;
@@ -30,7 +30,7 @@ $server->onConnectPeer(function ($peer) {
 });
 
 
-$client = new maestroprog\esockets\Client();
+$client = new maestroprog\esockets\TcpClient();
 if ($client->connect()) {
     \maestroprog\esockets\debug\Log::log('успешно соединился!');
 }

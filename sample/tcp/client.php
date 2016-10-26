@@ -14,7 +14,7 @@ require 'common.php';
 
 use maestroprog\esockets\debug\Log as _;
 
-$client = new maestroprog\esockets\Client();
+$client = new maestroprog\esockets\TcpClient(['socket_port' => 55667]);
 if ($client->connect()) {
     _::log('успешно соединился!');
 }
@@ -37,12 +37,12 @@ unset($client);
 
 // симулируем множество клиентов
 /**
- * @var $clients \maestroprog\esockets\Peer[]
+ * @var $clients \maestroprog\esockets\TcpClient[]
  */
 $clients = [];
-for ($i = 0; $i < 1; $i++) {
+for ($i = 0; $i < 10; $i++) {
 
-    $client = new maestroprog\esockets\Client();
+    $client = new maestroprog\esockets\TcpClient(['socket_port' => 55667]);
     if ($client->connect()) {
         _::log('успешно соединился!');
     }
@@ -56,12 +56,16 @@ for ($i = 0; $i < 1; $i++) {
     usleep(100000);
 }
 // симулируем большой трафик
-for ($i = 0; $i < 1; $i++) {
+for ($i = 0; $i < 10; $i++) {
     foreach ($clients as $j => $client) {
-        $client->send('Hello, I am ' . $j . ' client for ' . $i . ' request! =)');
+        if (!$client->send('Hello, I am ' . $j . ' client for ' . $i . ' request! =)')) {
+            _::log('FAIL SEND');
+        }
+        unset($client);
     }
+    usleep(100000);
 }
-
+sleep(1);
 // отключаем всех клиентов
 foreach ($clients as $client) {
     $client->disconnect();

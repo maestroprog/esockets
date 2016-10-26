@@ -7,10 +7,16 @@
  */
 
 require 'common.php';
+$work = true;
+
+pcntl_signal(SIGINT, function (int $signo) use (&$work) {
+    $work = false;
+    var_dump($signo);
+}, false);
 
 use maestroprog\esockets\debug\Log as _;
 
-$server = new \maestroprog\esockets\Server();
+$server = new \maestroprog\esockets\TcpServer(['socket_port' => 55667]);
 if (!$server->connect()) {
     echo 'Не удалось запустить сервер!<br>' . PHP_EOL;
     exit;
@@ -33,14 +39,16 @@ $server->onConnectPeer(function ($peer) {
     });
 });
 
-while (true) {
+while ($work) {
 
     $server->listen(); // принимаем новые соединения
     $server->read(); // принимаем новые сообщения
-    if (time() % 3 === 0) {
+    if (time() % 1000 === 0) {
         $server->ping();
     }
 
-    //usleep(10000); // sleep for 10 ms
-    sleep(1);
+    usleep(10000); // sleep for 10 ms
+    pcntl_signal_dispatch();
 }
+$server->disconnect();
+echo 'Успешно завершили работу!', PHP_EOL;

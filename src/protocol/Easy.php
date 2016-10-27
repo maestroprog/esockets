@@ -9,6 +9,7 @@
 namespace maestroprog\esockets\protocol;
 
 use maestroprog\esockets\protocol\base\UseIO;
+use maestroprog\esockets\debug\Log;
 
 class Easy extends UseIO
 {
@@ -24,16 +25,16 @@ class Easy extends UseIO
 
     public function read(bool $need = false)
     {// read message meta
-        if (($data = $this->provider->read(5)) !== false) {
+        if (($data = $this->provider->read(65540)) !== false) {
             list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', $data));
-            \maestroprog\esockets\debug\Log::log('read length ' . $length);
-            \maestroprog\esockets\debug\Log::log('flag ' . $flag);
-            \maestroprog\esockets\debug\Log::log('read try ' . $length . ' bytes');
+            Log::log('read length ' . $length);
+            Log::log('flag ' . $flag);
+            Log::log('read try ' . $length . ' bytes');
             if (($data = $this->provider->read($length, true)) !== false) {
-                \maestroprog\esockets\debug\Log::log('data retrieved');
+                Log::log('data retrieved');
                 $data = $this->unpack($data, $flag);
             } else {
-                \maestroprog\esockets\debug\Log::log('cannot retrieve data');
+                Log::log('cannot retrieve data');
             }
         }
     }
@@ -92,10 +93,10 @@ class Easy extends UseIO
             $raw = $data;
         // начиная с этого момента исходная "$data" становится "$raw"
         $length = strlen($raw);
-        if ($length >= 0xffffffff) { // 4294967296 bytes
-            trigger_error('Big data size to send! I can split it\'s', E_USER_ERROR); // кто-то попытался передать более 4 ГБ за раз, выдаем ошибку
-            // СТОП СТОП СТОП! Какой идиот за раз будет передавать 4 ГБ?
-            //...
+        if ($length >= 0xffff) { // 65535 bytes
+            trigger_error('Big data size to send! I can split it\'s', E_USER_ERROR);
+            // кто-то попытался передать более 64 КБ за раз, выдаем ошибку
+            //...пока что
             return false;
         } else {
             $length = strlen($raw);
@@ -136,13 +137,13 @@ class Easy extends UseIO
                 if (is_callable($this->event_pong)) {
                     call_user_func($this->event_pong, $raw);
                 } else {
-                    \maestroprog\esockets\debug\Log::log('pong received');
+                    Log::log('pong received');
                 }
             }
         } elseif ($flag & self::DATA_PING_PONG) {
             // отправляем исходные данные "pong" с исходным форматом, дополнительно устанавливая флаг DATA_CONTROL
             $this->_send($raw, $flag | self::DATA_CONTROL);
-            \maestroprog\esockets\debug\Log::log('ping received and pong sended');
+            Log::log('ping received and pong sended');
             return;
         }*/
         return $data;

@@ -35,6 +35,7 @@ class TcpSocket extends Middleware
 
     /** Список известных ошибок для настройки обработчика */
     const ERRORS_KNOW = [
+        'SOCKET_EWOULDBLOCK' => self::ERROR_NOTHING,
         'SOCKET_EAGAIN' => self::ERROR_AGAIN,
         'SOCKET_TRY_AGAIN' => self::ERROR_AGAIN,
         'SOCKET_EPIPE' => self::ERROR_FATAL,
@@ -53,6 +54,8 @@ class TcpSocket extends Middleware
 
     public function __construct(Net $connection)
     {
+        //SOCKET_EAGAIN;
+        //SOCKET_TRY_AGAIN;
         $this->connection = $connection;
         $this->socket = $connection->getConnection();
 
@@ -64,10 +67,10 @@ class TcpSocket extends Middleware
     {
         $buffer = '';
         $try = 0;
-        while ($length > 0) {
+        do {
             $data = socket_read($this->socket, $length);
             if ($data === false) return false;
-            \maestroprog\esockets\debug\Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
+            Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
             switch ($this->errorType(socket_last_error($this->socket), self::OP_READ)) {
                 case self::ERROR_NOTHING:
                     // todo
@@ -91,7 +94,7 @@ class TcpSocket extends Middleware
                         $this->connection->disconnect(); // TODO тут тоже закрыто. выяснить почему???
                         return false;
                     } else {
-                        \maestroprog\esockets\debug\Log::log('Socket read error: SOCKET_EAGAIN at READING');
+                        Log::log('Socket read error: SOCKET_EAGAIN at READING');
                         usleep(self::SOCKET_WAIT);
                     }
                     continue 2;
@@ -105,13 +108,13 @@ class TcpSocket extends Middleware
 
                 case self::ERROR_UNKNOWN:
                     throw new \Exception(
-                        'Socket write error: '
+                        'Socket read error: '
                         . socket_strerror(socket_last_error($this->socket)),
                         socket_last_error($this->socket)
                     );
                     break;
             }
-        }
+        } while ($need && $length > 0);
         return $buffer;
     }
 

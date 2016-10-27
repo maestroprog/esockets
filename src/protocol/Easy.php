@@ -25,18 +25,28 @@ class Easy extends UseIO
 
     public function read(bool $need = false)
     {// read message meta
-        if (($data = $this->provider->read(65540)) !== false) {
+        if (($buffer = $this->provider->read(65540)) !== false) {
+            $data = substr($buffer, 0, 5);
             list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', $data));
+            $lengthStill = (strlen($buffer) - 5) - $length;
             Log::log('read length ' . $length);
             Log::log('flag ' . $flag);
-            Log::log('read try ' . $length . ' bytes');
-            if (($data = $this->provider->read($length, true)) !== false) {
-                Log::log('data retrieved');
-                $data = $this->unpack($data, $flag);
-            } else {
-                Log::log('cannot retrieve data');
+            if ($lengthStill > 0) {
+                Log::log('read try ' . $lengthStill . ' bytes');
+                if (($dataStill = $this->provider->read($lengthStill, true)) !== false) {
+                    $buffer .= $dataStill;
+                } else {
+                    Log::log('cannot retrieve data');
+                    throw new \Exception('Cannot retrieve data');
+                }
+            } elseif ($lengthStill < 0) {
+                throw new \Exception(sprintf('Not enough length: %d bytes', $lengthStill));
             }
+
+            Log::log('data retrieved');
+            return $this->unpack(substr($buffer, 5), $flag);
         }
+        return false;
     }
 
     /**

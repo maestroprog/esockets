@@ -9,10 +9,12 @@
 require 'common.php';
 $work = true;
 
-pcntl_signal(SIGINT, function (int $signo) use (&$work) {
-    $work = false;
-    var_dump($signo);
-}, false);
+if (extension_loaded('pcntl')) {
+    pcntl_signal(SIGINT, function (int $signo) use (&$work) {
+        $work = false;
+        var_dump($signo);
+    }, false);
+}
 
 use maestroprog\esockets\debug\Log as _;
 
@@ -48,7 +50,9 @@ while ($work) {
     }
 
     usleep(10000); // sleep for 10 ms
-    pcntl_signal_dispatch();
+    if (extension_loaded('pcntl')) {
+        pcntl_signal_dispatch();
+    }
 }
 $server->disconnect();
 echo 'Успешно завершили работу!', PHP_EOL;

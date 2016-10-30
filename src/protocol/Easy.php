@@ -125,7 +125,7 @@ class Easy extends UseIO
      * @param int $flag
      * @return mixed
      */
-    private function unpack(string &$raw, int $flag)
+    private function unpack(string $raw, int $flag)
     {
         $data = null;
         if ($flag & self::DATA_JSON) {

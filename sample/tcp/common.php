@@ -17,21 +17,7 @@ file_put_contents('messages.log', '');
 
 set_time_limit(0);
 
-spl_autoload_register(function ($class) {
-    $parts = explode('\\', $class);
-
-    # Support for non-namespaced classes.
-    //$parts[] = str_replace('_', DIRECTORY_SEPARATOR, array_pop($parts));
-    $parts = [end($parts)];
-
-    $path = implode(DIRECTORY_SEPARATOR, $parts);
-
-    $file = stream_resolve_include_path('../../src/' . $path . '.php');
-    if ($file !== false) {
-        require $file;
-    }
-});
-
+require __DIR__ . '/../../autoload.php';
 
 function error_type($type)
 {
@@ -69,11 +55,12 @@ function error_type($type)
     }
     return "";
 }
-
-set_exception_handler(function (Exception $e) {
-    error_log(sprintf('Вызвана ошибка %d: %s; %s', $e->getCode(), $e->getMessage(), $e->getTraceAsString()));
+/*
+set_exception_handler(function (Throwable $e) {
+    \maestroprog\esockets\debug\Log::log(sprintf('Вызвана ошибка %d: %s; %s', $e->getCode(), $e->getMessage(), $e->getTraceAsString()));
 });
 
 set_error_handler(function ($errno, $errstr, $errfile, $errline, array $errcontext) {
-    error_log(sprintf('[%s]: %s in %s at %d line', error_type($errno), $errstr, $errfile, $errline));
+    \maestroprog\esockets\debug\Log::log(sprintf('[%s]: %s in %s at %d line', error_type($errno), $errstr, $errfile, $errline));
 });
+*/

@@ -6,24 +6,16 @@
  * Time: 13:04
  */
 
-namespace Esockets;
+namespace maestroprog\esockets\base;
 
 
 interface NetInterface
 {
-    const DATA_RAW = 0;
-    const DATA_JSON = 1;
-    const DATA_INT = 2;
-    const DATA_FLOAT = 4;
-    const DATA_STRING = 8;
-    const DATA_ARRAY = 16;
-    const DATA_EXTENDED = 32; // reserved for objects
-    const DATA_PING_PONG = 64; // reserved
-    const DATA_CONTROL = 128;
 
     /**
      * @return bool
      * соединяет с сетью
+     * создаёт поставщика ввода вывода
      * вовзаращает true при успешном соединении, false при сбое
      */
     public function connect();
@@ -34,8 +26,7 @@ interface NetInterface
     public function disconnect();
 
     /**
-     * читает поступившие данные из сети
-     * послушный метод, ничего не возвращает,
+     * Читает поступившие данные из сети
      * при чтении вызывает обработчик события, назначенное в onRead()
      */
     public function read();

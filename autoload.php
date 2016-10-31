@@ -10,11 +10,12 @@ spl_autoload_register(function ($class) {
 
     # Support for non-namespaced classes.
     //$parts[] = str_replace('_', DIRECTORY_SEPARATOR, array_pop($parts));
-    $parts = [end($parts)];
 
+    $parts = array_slice($parts, 2);
     $path = implode(DIRECTORY_SEPARATOR, $parts);
 
     $file = stream_resolve_include_path(__DIR__ . '/src/' . $path . '.php');
+    
     if ($file !== false) {
         require $file;
     }

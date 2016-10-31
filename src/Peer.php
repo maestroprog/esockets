@@ -8,8 +8,10 @@
  * Time: 8:55
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
+
+use maestroprog\esockets\base\Net;
 
 class Peer extends Net
 {
@@ -31,35 +33,34 @@ class Peer extends Net
     private $dsc;
 
 
+    /**
+     * Peer constructor.
+     * @param array $connection
+     * @param $dsc
+     * @throws \Exception
+     */
     public function __construct(&$connection, $dsc)
     {
-        if (is_resource($connection)) {
-            $this->connection = $connection;
-            $this->connected = true;
-            $this->dsc = $dsc;
-            parent::__construct();
-            return $this;
+        if (!is_resource($connection) || 'Socket' !== $t = get_resource_type($connection)) {
+            throw new \Exception('Given connection not is resource of socket connection');
         }
-        return false;
-    }
-
-    public function connect()
-    {
-        // метод-заглушка
-        // TODO: Implement connect() method.
+        $this->connection = $connection;
+        $this->connected = true;
+        $this->dsc = $dsc;
+        parent::__construct();
+        parent::connect();
     }
 
     public function is_connected()
     {
         return $this->connected;
-        // TODO: Implement is_connected() method.
     }
 
 
     public function disconnect()
     {
+        $this->connected = false; // как только начали дисконнектиться-ставим флаг
         parent::disconnect();
-        $this->connected = false;
     }
 
     public function onDisconnect(callable $callback)
@@ -75,19 +76,13 @@ class Peer extends Net
         }
     }
 
-    public function getAddress()
-    {
-        $address = $port = null;
-        if (socket_getpeername($this->connection, $address, $port)) {
-            return $address . ':' . $port;
-        } else {
-            return 'Unknown';
-        }
-    }
-
     public function getDsc()
     {
         return $this->dsc;
     }
 
+    protected function getPeerName(string &$addr, int &$port)
+    {
+        socket_getpeername($this->connection, $addr, $port);
+    }
 }

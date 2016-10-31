@@ -8,22 +8,24 @@
  * Time: 8:55
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
 
 
-class Client extends Net
+use maestroprog\esockets\base\Net;
+
+class TcpClient extends Net
 {
     /**
      * @var bool connection state
      */
-    private $connected = false;
+    protected $connected = false;
 
     /* event variables */
 
     /**
      * @var callable
      */
-    private $event_disconnect;
+    protected $event_disconnect;
 
     public function connect()
     {
@@ -37,8 +39,8 @@ class Client extends Net
 
     public function disconnect()
     {
+        $this->connected = false; // как только начали дисконнектиться - тоже ставим флаг
         parent::disconnect();
-        $this->connected = false;
     }
 
     public function onDisconnect(callable $callback)
@@ -53,11 +55,14 @@ class Client extends Net
         }
     }
 
-    private function _connect()
+    protected function _connect()
     {
         if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $this->socket_domain > 1 ? getprotobyname('tcp') : 0)) {
             if (socket_connect($this->connection, $this->socket_address, $this->socket_port)) {
-                $this->setNonBlock();// $this->connection); // устанавливаем неблокирующий режим работы сокета
+
+                parent::connect();
+                $this->setNonBlock(); // устанавливаем неблокирующий режим работы сокета
+
                 return $this->connected = true;
             } else {
                 $error = socket_last_error($this->connection);
@@ -69,7 +74,7 @@ class Client extends Net
                         $this->disconnect();
                         return false;
                     default:
-                        // в иных случаях кидаем необрабатываемое исключение
+                        // в иных случаях кидаем исключение
                         throw new \Exception(socket_strerror($error));
 
                 }
@@ -80,4 +85,9 @@ class Client extends Net
         return false;
     }
 
+    protected function getPeerName(string &$addr, int &$port)
+    {
+        $addr = $this->socket_address;
+        $port = $this->socket_port;
+    }
 }

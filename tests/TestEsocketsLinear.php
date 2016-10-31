@@ -6,36 +6,35 @@
  * Time: 21:26
  */
 
-namespace Esockets;
+namespace maestroprog\esockets;
+
+use TestEnvironment as Env;
 
 
 class TestEsockets extends \PHPUnit_Framework_TestCase
 {
-    /** @var Server */
-    static private $server;
-    /** @var Client */
-    static private $client;
-    /** @var int */
-    static private $peer_accepted = 0;
+    private static $peer_accepted = 0;
 
     public function testServerOpen()
     {
-        self::$server = new Server();
-        $this->assertTrue(self::$server->connect(), 'Сервер не создаётся');
+        Env::$server = new Server();
+        $this->assertTrue(Env::$server->connect(), 'Сервер не создаётся');
     }
 
     public function testClientConnect()
     {
-        self::$client = new Client();
-        $this->assertTrue(self::$client->connect(), 'Клиент не может соединиться');
+        Env::$client = new Client();
+        $this->assertTrue(Env::$client->connect(), 'Клиент не может соединиться');
     }
 
     public function testServerAcceptClient()
     {
-        self::$server->onConnectPeer(function (Peer $peer) {
+        Env::$server->onConnectPeer(function (Peer $peer) {
             self::$peer_accepted++;
+
+            $peer->onRead([$this, 'serverPeerReceiveData']);
         });
-        self::$server->listen();
+        Env::$server->listen();
     }
 
     public function testServerAcceptPeer()
@@ -43,19 +42,32 @@ class TestEsockets extends \PHPUnit_Framework_TestCase
         $this->assertTrue(self::$peer_accepted > 0);
     }
 
+    protected static $client_send_msg = 'Hello world';
+
     public function testClientSendData()
     {
-        $this->assertTrue(self::$client->send('Hello world'), 'Клиент не может отправить данные');
+        $this->assertTrue(Env::$client->send(self::$client_send_msg), 'Клиент не может отправить данные');
     }
+
+    protected static $peer_read_msg = false;
 
     public function testServerReceiveData()
     {
-        //self::$server->
+        Env::$server->select();
+        Env::$server->read();
+
+        $this->assertNotFalse(self::$peer_read_msg, 'А сервер ничего не получил!');
+        $this->assertEquals(self::$client_send_msg, self::$peer_read_msg, 'Прочитали какую-то хрень');
+    }
+
+    public function serverPeerReceiveData($msg)
+    {
+        self::$peer_read_msg = $msg;
     }
 
     public function testClientDisconnect()
     {
-        self::$client->disconnect();
-        self::assertTrue(self::$client->is_connected());
+        Env::$client->disconnect();
+        $this->assertFalse(Env::$client->is_connected());
     }
 }

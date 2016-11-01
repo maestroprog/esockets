@@ -40,6 +40,8 @@ class TcpSocket extends Middleware
         'SOCKET_TRY_AGAIN' => self::ERROR_AGAIN,
         'SOCKET_EPIPE' => self::ERROR_FATAL,
         'SOCKET_ENOTCONN' => self::ERROR_FATAL,
+        'SOCKET_ECONNABORTED' => self::ERROR_FATAL,
+        'SOCKET_ECONNRESET' => self::ERROR_FATAL,
     ];
 
     /**
@@ -69,9 +71,8 @@ class TcpSocket extends Middleware
         $try = 0;
         do {
             $data = socket_read($this->socket, $length);
-            if ($data === false) {
-                return false;
-            } elseif ($data === '') {
+            Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
+            if ($data === false || $data === '') {
                 switch ($this->errorType(socket_last_error($this->socket), self::OP_READ)) {
                     case self::ERROR_NOTHING:
                         // todo
@@ -85,7 +86,7 @@ class TcpSocket extends Middleware
                         }
                         break;
                     case self::ERROR_AGAIN:
-                        if (!strlen($buffer) && (!$need || $try++ > 100)) {
+                        if (!strlen($data) && (!$need || $try++ > 100)) {
                             $this->connection->disconnect(); // TODO тут тоже закрыто. выяснить почему???
                             return false;
                         } elseif ($length > 0) {
@@ -110,7 +111,6 @@ class TcpSocket extends Middleware
                         break;
                 }
             } else {
-                Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
                 $buffer .= $data;
                 $length -= strlen($data);
                 $try = 0; // обнуляем счетчик попыток чтения
@@ -190,12 +190,14 @@ class TcpSocket extends Middleware
         if ($errno === 0) {
             return self::ERROR_NOTHING;
         } elseif (isset(self::$catchableErrors[$errno])) {
-            Log::log(sprintf(
-                'Socket catch error %s at %s: %d',
-                socket_strerror($errno),
-                $operation ? 'WRITING' : 'READING',
-                $errno
-            ));
+            if (self::$catchableErrors[$errno] !== self::ERROR_NOTHING) {
+                Log::log(sprintf(
+                    'Socket catch error %s at %s: %d',
+                    socket_strerror($errno),
+                    $operation ? 'WRITING' : 'READING',
+                    $errno
+                ));
+            }
             return self::$catchableErrors[$errno];
         } else {
             Log::log(sprintf('Unknown socket error %d: %s', $errno, socket_strerror($errno)));

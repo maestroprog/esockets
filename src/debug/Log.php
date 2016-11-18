@@ -11,9 +11,19 @@ namespace maestroprog\esockets\debug;
 
 final class Log
 {
+    protected static $env;
+
     public static function log($msg)
     {
+        if (self::$env) {
+            $msg = sprintf('{%s}: %s', self::$env, $msg);
+        }
         echo $msg . PHP_EOL;
         \error_log($msg);
+    }
+
+    public static function setEnv($env)
+    {
+        self::$env = $env;
     }
 }

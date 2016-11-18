@@ -40,6 +40,8 @@ class TcpSocket extends Middleware
         'SOCKET_TRY_AGAIN' => self::ERROR_AGAIN,
         'SOCKET_EPIPE' => self::ERROR_FATAL,
         'SOCKET_ENOTCONN' => self::ERROR_FATAL,
+        'SOCKET_ECONNABORTED' => self::ERROR_FATAL,
+        'SOCKET_ECONNRESET' => self::ERROR_FATAL,
     ];
 
     /**
@@ -69,50 +71,52 @@ class TcpSocket extends Middleware
         $try = 0;
         do {
             $data = socket_read($this->socket, $length);
-            if ($data === false) return false;
             Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
-            switch ($this->errorType(socket_last_error($this->socket), self::OP_READ)) {
-                case self::ERROR_NOTHING:
-                    // todo
-                    if ($data === false) {
-                        Log::log('READ FALSE!!!!');
+            if ($data === false || $data === '') {
+                switch ($this->errorType(socket_last_error($this->socket), self::OP_READ)) {
+                    case self::ERROR_NOTHING:
+                        // todo
+                        if ($data === false) {
+                            Log::log('READ FALSE!!!!');
+                            return false;
+                        } else {
+                            Log::log('EMPTY!!!!');
+                            $this->connection->disconnect();
+                            return false;
+                        }
+                        break;
+                    case self::ERROR_AGAIN:
+                        if (!strlen($data) && (!$need || $try++ > 100)) {
+                            $this->connection->disconnect(); // TODO тут тоже закрыто. выяснить почему???
+                            return false;
+                        } elseif ($length > 0) {
+                            Log::log('Socket read error: SOCKET_EAGAIN at READING');
+                            usleep(self::SOCKET_WAIT);
+                        }
+                        continue 2;
+                        break;
+                    case self::ERROR_SKIP:
                         return false;
-                    } elseif ($data === '') {
-                        Log::log('EMPTY!!!!');
-                        $this->connection->disconnect();
-                        return false;
-                    } else {
-                        $buffer .= $data;
-                        $length -= strlen($data);
-                        $try = 0; // обнуляем счетчик попыток чтения
-                        usleep(self::SOCKET_WAIT);
-                    }
-                    break;
-                case self::ERROR_AGAIN:
-                    var_dump($data);
-                    if ($data === '' && !strlen($buffer) && (!$need || $try++ > 100)) {
-                        $this->connection->disconnect(); // TODO тут тоже закрыто. выяснить почему???
-                        return false;
-                    } else {
-                        Log::log('Socket read error: SOCKET_EAGAIN at READING');
-                        usleep(self::SOCKET_WAIT);
-                    }
-                    continue 2;
-                    break;
-                case self::ERROR_SKIP:
-                    return false;
 
-                case self::ERROR_FATAL:
-                    $this->connection->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
-                    return false;
+                    case self::ERROR_FATAL:
+                        $this->connection->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
+                        return false;
 
-                case self::ERROR_UNKNOWN:
-                    throw new \Exception(
-                        'Socket read error: '
-                        . socket_strerror(socket_last_error($this->socket)),
-                        socket_last_error($this->socket)
-                    );
-                    break;
+                    case self::ERROR_UNKNOWN:
+                        throw new \Exception(
+                            'Socket read error: '
+                            . socket_strerror(socket_last_error($this->socket)),
+                            socket_last_error($this->socket)
+                        );
+                        break;
+                }
+            } else {
+                $buffer .= $data;
+                $length -= strlen($data);
+                $try = 0; // обнуляем счетчик попыток чтения
+                if ($length > 0) {
+                    usleep(self::SOCKET_WAIT);
+                }
             }
         } while ($need && $length > 0);
         return $buffer;
@@ -186,12 +190,14 @@ class TcpSocket extends Middleware
         if ($errno === 0) {
             return self::ERROR_NOTHING;
         } elseif (isset(self::$catchableErrors[$errno])) {
-            Log::log(sprintf(
-                'Socket catch error %s at %s: %d',
-                socket_strerror($errno),
-                $operation ? 'WRITING' : 'READING',
-                $errno
-            ));
+            if (self::$catchableErrors[$errno] !== self::ERROR_NOTHING) {
+                Log::log(sprintf(
+                    'Socket catch error %s at %s: %d',
+                    socket_strerror($errno),
+                    $operation ? 'WRITING' : 'READING',
+                    $errno
+                ));
+            }
             return self::$catchableErrors[$errno];
         } else {
             Log::log(sprintf('Unknown socket error %d: %s', $errno, socket_strerror($errno)));

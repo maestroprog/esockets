@@ -265,6 +265,14 @@ class TcpServer extends Net implements ServerInterface
         return count($this->connections);
     }
 
+    public function getPeerByDsc(int $dsc)
+    {
+        if (!isset($this->connections[$dsc]) || !$this->connections[$dsc] instanceof Peer) {
+            throw new \Exception('Cannot get Peer by this "dsc" ' . $dsc);
+        }
+        return $this->connections[$dsc];
+    }
+
     protected function getPeerName(string &$addr, int &$port)
     {
         $addr = $this->socket_address;

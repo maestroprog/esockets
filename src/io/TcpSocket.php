@@ -71,13 +71,13 @@ class TcpSocket extends Middleware
         $try = 0;
         do {
             $data = socket_read($this->socket, $length);
-            Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
+            #Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
             if ($data === false || $data === '') {
                 switch ($this->errorType(socket_last_error($this->socket), self::OP_READ)) {
                     case self::ERROR_NOTHING:
                         // todo
                         if ($data === false) {
-                            Log::log('READ FALSE!!!!');
+                            #Log::log('READ FALSE!!!!');
                             return false;
                         } else {
                             Log::log('EMPTY!!!!');

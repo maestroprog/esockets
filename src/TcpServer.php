@@ -152,7 +152,6 @@ class TcpServer extends Net implements ServerInterface
             /**
              * @var $peer Peer
              */
-            \maestroprog\esockets\debug\Log::log('Читаю пира ' . $peer->getDsc() . ' on adddress ' . $peer->getAddress());
             $peer->read();
         }
     }

@@ -80,13 +80,17 @@ class TcpSocket extends Middleware
                             #Log::log('READ FALSE!!!!');
                             return false;
                         } else {
-                            Log::log('EMPTY!!!!');
-                            $this->connection->disconnect();
+                            //Log::log('EMPTY!!!!');
+                            //$this->connection->disconnect();
                             return false;
                         }
                         break;
                     case self::ERROR_AGAIN:
-                        if (!strlen($data) && (!$need || $try++ > 100)) {
+                        if ($data === false) {
+                            // todo это вроде как только для unix систем
+                            return false;
+                        } elseif (!strlen($data) || ($need && $try++ > 100)) {
+                            //todo
                             $this->connection->disconnect(); // TODO тут тоже закрыто. выяснить почему???
                             return false;
                         } elseif ($length > 0) {
@@ -190,7 +194,10 @@ class TcpSocket extends Middleware
         if ($errno === 0) {
             return self::ERROR_NOTHING;
         } elseif (isset(self::$catchableErrors[$errno])) {
-            if (self::$catchableErrors[$errno] !== self::ERROR_NOTHING) {
+            if (
+                self::$catchableErrors[$errno] !== self::ERROR_NOTHING
+                && self::$catchableErrors[$errno] !== self::ERROR_AGAIN // for unix-like systems
+            ) {
                 Log::log(sprintf(
                     'Socket catch error %s at %s: %d',
                     socket_strerror($errno),

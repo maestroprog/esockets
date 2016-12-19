@@ -16,7 +16,7 @@ final class Log
     public static function log($message)
     {
         if (self::$env) {
-            $message = sprintf('{%s}: %s', self::$env, $message);
+            $message = sprintf('{%s} [%s]: %s', self::$env, date('H:i:s'), $message);
         }
         if (PHP_SAPI === 'cli') {
             fputs(STDERR, $message . PHP_EOL);

@@ -225,6 +225,7 @@ class TcpServer extends Net implements ServerInterface
             $this->connections_dsc++;
         }
         if ($peer = new Peer($connection, $this->connections_dsc)) {
+            \maestroprog\esockets\debug\Log::log('Присоединился пир ' . $peer->getDsc());
             $peer->setNonBlock();
             $this->connections[$this->connections_dsc] = &$peer;
             if (is_callable($this->event_accept)) {

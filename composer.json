@@ -21,7 +21,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Esockets": "src"
+      "Esockets\\": "src"
     }
   }
 }

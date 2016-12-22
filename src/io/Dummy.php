@@ -6,12 +6,11 @@
  * Time: 20:12
  */
 
-namespace maestroprog\esockets\io;
+namespace Esockets\io;
 
+use Esockets\io\base\Aware;
 
-use maestroprog\esockets\io\base\Middleware;
-
-class Dummy extends Middleware
+class Dummy implements Aware
 {
     public function read(int $length, bool $need = false)
     {

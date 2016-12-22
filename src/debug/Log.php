@@ -7,7 +7,7 @@
  * Time: 20:45
  */
 
-namespace maestroprog\esockets\debug;
+namespace Esockets\debug;
 
 final class Log
 {

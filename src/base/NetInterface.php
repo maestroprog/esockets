@@ -6,12 +6,10 @@
  * Time: 13:04
  */
 
-namespace maestroprog\esockets\base;
-
+namespace Esockets\base;
 
 interface NetInterface
 {
-
     /**
      * @return bool
      * соединяет с сетью
@@ -32,6 +30,7 @@ interface NetInterface
     public function read();
 
     /**
+     * @param $data
      * @return bool
      * отправляет пакет данных в сеть
      * возвращает true при успешной отправке, false при сбое
@@ -65,5 +64,4 @@ interface NetInterface
      * назначает событие при чтении данных
      */
     public function onRead(callable $callback);
-
 }

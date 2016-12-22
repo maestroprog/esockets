@@ -6,42 +6,42 @@
  * Time: 18:10
  */
 
-require_once 'server-client/common.php';
+require_once 'tcp/common.php';
 
-$server = new \maestroprog\esockets\TcpServer();
+$server = new \Esockets\TcpServer();
 if (!$server->connect()) {
     echo ' Не удалось запустить сервер! <br>' . PHP_EOL;
     exit;
 }
 $server->onConnectPeer(function ($peer) {
     /**
-     * @var $peer \maestroprog\esockets\Peer
+     * @var $peer \Esockets\Peer
      */
-    \maestroprog\esockets\debug\Log::log(' Принял ' . $peer->getAddress() . ' !');
+    \Esockets\debug\Log::log(' Принял ' . $peer->getAddress() . ' !');
     $peer->onRead(function ($msg) use ($peer) {
         /**
-         * @var $this \maestroprog\esockets\Peer
+         * @var $this \Esockets\Peer
          */
-        \maestroprog\esockets\debug\Log::log(' Получил от ' . $peer->getAddress() . $msg . ' !');
+        \Esockets\debug\Log::log(' Получил от ' . $peer->getAddress() . $msg . ' !');
     });
     $peer->onDisconnect(function () use ($peer) {
-        \maestroprog\esockets\debug\Log::log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
+        \Esockets\debug\Log::log('Чувак ' . $peer->getAddress() . ' отсоединиляс от сервера');
     });
 });
 
 
-$client = new maestroprog\esockets\TcpClient();
+$client = new Esockets\TcpClient();
 if ($client->connect()) {
-    \maestroprog\esockets\debug\Log::log('успешно соединился!');
+    \Esockets\debug\Log::log('успешно соединился!');
 }
 $client->onDisconnect(function () {
-    \maestroprog\esockets\debug\Log::log('Меня отсоединили или я сам отсоединился!');
+    \Esockets\debug\Log::log('Меня отсоединили или я сам отсоединился!');
 });
 $client->onRead(function ($msg) {
-    \maestroprog\esockets\debug\Log::log('Получил что то: ' . $msg . ' !');
+    \Esockets\debug\Log::log('Получил что то: ' . $msg . ' !');
 });
 
-$work = new \maestroprog\esockets\WorkManager();
+$work = new \Esockets\WorkManager();
 $work->addWork('serverAccept', [$server, 'listen'], [], ['always' => true, 'interval' => 5000]);
 $work->addWork('serverReceive', [$server, 'read'], [], ['always' => true, 'interval' => 1000]);
 $work->addWork('clientReceive', [$client, 'read'], [], ['always' => true, 'interval' => 1000]);
@@ -49,10 +49,10 @@ $work->addWork('clientReceive', [$client, 'read'], [], ['always' => true, 'inter
 $work->execWork();
 
 if ($client->send('HELLO WORLD!')) {
-    \maestroprog\esockets\debug\Log::log('Отправил!');
+    \Esockets\debug\Log::log('Отправил!');
 }
 if ($server->send('HELLO!')) {
-    \maestroprog\esockets\debug\Log::log('Я тоже отправил!');
+    \Esockets\debug\Log::log('Я тоже отправил!');
 }
 
 for ($i = 0; $i < 2; $i++) {

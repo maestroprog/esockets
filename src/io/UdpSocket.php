@@ -6,16 +6,14 @@
  * Time: 21:12
  */
 
-namespace maestroprog\esockets\io;
+namespace Esockets\io;
 
+use Esockets\base\Net;
+use Esockets\debug\Log;
+use Esockets\io\base\Aware;
 
-use maestroprog\esockets\base\Net;
-use maestroprog\esockets\debug\Log;
-use maestroprog\esockets\io\base\Middleware;
-
-class UdpSocket extends Middleware
+class UdpSocket implements Aware
 {
-
     /**
      * @var Net
      */
@@ -52,5 +50,4 @@ class UdpSocket extends Middleware
         list($addr, $port) = $this->connection->getPeerAddress();
         socket_sendto($this->socket, $data, strlen($data), 0, $addr, $port);
     }
-
 }

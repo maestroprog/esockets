@@ -6,9 +6,9 @@
  * Time: 20:43
  */
 
-namespace maestroprog\esockets\protocol\base;
+namespace Esockets\protocol\base;
 
-use maestroprog\esockets\io\base\Aware as IOAware;
+use Esockets\io\base\Aware as IOAware;
 
 abstract class UseIO implements Aware
 {

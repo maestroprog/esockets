@@ -6,9 +6,9 @@
  * Time: 19:24
  */
 
-namespace maestroprog\esockets\protocol;
+namespace Esockets\protocol;
 
-use maestroprog\esockets\protocol\base\UseIO;
+use Esockets\protocol\base\UseIO;
 
 class Dummy extends UseIO
 {
@@ -17,7 +17,6 @@ class Dummy extends UseIO
      */
     function read(bool $need = false)
     {
-        // @todo проверить что будет с 0
         return $this->provider->read(0, $need);
     }
 

@@ -6,7 +6,7 @@
  * Time: 21:24
  */
 
-namespace maestroprog\esockets\io\base;
+namespace Esockets\io\base;
 
 /**
  * Интерфейс, показывающий возможности ввода/вывода.

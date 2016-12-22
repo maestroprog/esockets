@@ -8,16 +8,14 @@
  * Time: 19:48
  */
 
-namespace maestroprog\esockets;
+namespace Esockets;
 
-
-use maestroprog\esockets\base\Net;
-use maestroprog\esockets\base\ServerInterface;
+use Esockets\base\Net;
+use Esockets\base\ServerInterface;
 
 class TcpServer extends Net implements ServerInterface
 {
     /* server variables */
-
     /**
      * @var Peer[]
      */
@@ -39,6 +37,7 @@ class TcpServer extends Net implements ServerInterface
      * @var callable
      */
     private $event_disconnect;
+
     /**
      * @var callable
      */
@@ -47,8 +46,12 @@ class TcpServer extends Net implements ServerInterface
     /**
      * @var callable
      */
-    private $event_accept;
+    private $event_disconnect_all;
 
+    /**
+     * @var callable
+     */
+    private $event_accept;
 
     /* other variables */
 
@@ -68,7 +71,8 @@ class TcpServer extends Net implements ServerInterface
     {
         if ($this->is_connected()) return true;
 
-        if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $this->socket_domain > 1 ? getprotobyname('tcp') : 0)) {
+        $protocol = $this->socket_domain > 1 ? getprotobyname('tcp') : 0;
+        if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $protocol)) {
             socket_set_option($this->connection, SOL_SOCKET, SO_REUSEADDR, 1);
             if (socket_bind($this->connection, $this->socket_address, $this->socket_port)) {
                 if (socket_listen($this->connection)) {
@@ -81,12 +85,9 @@ class TcpServer extends Net implements ServerInterface
             } else {
                 $error = socket_last_error($this->connection);
                 socket_clear_error($this->connection);
-                \maestroprog\esockets\debug\Log::log('error: ' . $error);
                 switch ($error) {
                     case SOCKET_EADDRINUSE:
                         // если сокет уже открыт - пробуем его закрыть и снова открыть
-                        // @TODO socket close self::socket_close();
-                        // @todo recheck this code
                         // closing socket and try restart
                         $this->disconnect();
                         if (!$this->_open_try) {
@@ -99,8 +100,6 @@ class TcpServer extends Net implements ServerInterface
                 }
             }
         }
-        // @TODO delete next line...
-        trigger_error('Server open failed', E_USER_ERROR);
         return false;
     }
 
@@ -116,10 +115,11 @@ class TcpServer extends Net implements ServerInterface
             parent::disconnect();
         $this->opened = false;
         if ($this->socket_domain === AF_UNIX) {
-            if (file_exists($this->socket_address))
+            if (file_exists($this->socket_address)) {
                 unlink($this->socket_address);
-            else
+            } else {
                 trigger_error(sprintf('Pipe file "%s" not found', $this->socket_address));
+            }
         }
     }
 
@@ -131,7 +131,7 @@ class TcpServer extends Net implements ServerInterface
 
         foreach ($this->connections as $index => $peer) {
             /**
-             * @var $peer \maestroprog\esockets\Peer
+             * @var $peer \Esockets\Peer
              */
             $peer->disconnect();
             unset($this->connections[$index], $peer);
@@ -161,7 +161,7 @@ class TcpServer extends Net implements ServerInterface
         $ok = true;
         foreach ($this->connections as $peer) {
             /**
-             * @var $peer \maestroprog\esockets\Peer
+             * @var $peer \Esockets\Peer
              */
             $ok &= $peer->send($data);
         }
@@ -170,10 +170,9 @@ class TcpServer extends Net implements ServerInterface
 
     public function ping()
     {
-        \maestroprog\esockets\debug\Log::log('Пингуем пиров');
         foreach ($this->connections as $peer) {
             /**
-             * @var $peer \maestroprog\esockets\Peer
+             * @var $peer \Esockets\Peer
              */
             $peer->ping();
         }
@@ -183,16 +182,13 @@ class TcpServer extends Net implements ServerInterface
     {
         $sockets = [$this->connection];
         foreach ($this->connections as $peer) {
-            // todo а нужно ли это?
             $sockets[] = $peer->getConnection();
         }
         $write = [];
         $except = [];
-        var_dump($sockets);
         if (false === ($rc = socket_select($sockets, $write, $except, null))) {
-            \maestroprog\esockets\debug\Log::log('socket_select failed!');
+            throw new \Exception('socket_select failed!');
         }
-        var_dump($rc, $sockets, $write, $except);
     }
 
     /**
@@ -225,14 +221,12 @@ class TcpServer extends Net implements ServerInterface
             $this->connections_dsc++;
         }
         if ($peer = new Peer($connection, $this->connections_dsc)) {
-            \maestroprog\esockets\debug\Log::log('Присоединился пир ' . $peer->getDsc());
             $peer->setNonBlock();
             $this->connections[$this->connections_dsc] = &$peer;
             if (is_callable($this->event_accept)) {
                 call_user_func_array($this->event_accept, [$peer]);
             }
             $peer->onDisconnect(function () use ($peer) {
-                \maestroprog\esockets\debug\Log::log('Отсоединился пир ' . $peer->getDsc());
                 unset($this->connections[$peer->getDsc()]);
                 $this->_onDisconnectPeer($peer);
             });
@@ -253,11 +247,21 @@ class TcpServer extends Net implements ServerInterface
         if (is_callable($this->event_disconnect_peer)) {
             call_user_func_array($this->event_disconnect_peer, [$peer]);
         }
+        if (count($this->connections) === 0) {
+            $this->_onDisconnectAll();
+        }
     }
 
     public function onDisconnectAll(callable $callback)
     {
-        // TODO: Implement onDisconnectAll() method.
+        $this->event_disconnect_all = $callback;
+    }
+
+    public function _onDisconnectAll()
+    {
+        if (is_callable($this->event_disconnect_all)) {
+            call_user_func($this->event_disconnect_all);
+        }
     }
 
     public function getConnectedCount()

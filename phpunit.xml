@@ -1,7 +1,7 @@
-<phpunit bootstrap="autoload-phpunit.php">
+<phpunit bootstrap="src/bootstrap.php">
     <testsuites>
         <testsuite name="esockets-test">
-            <file>tests/Testmaestroprog\esocketsLinear.php</file>
+            <file>tests/TestEsocketsLinear.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

@@ -6,13 +6,13 @@
  * Time: 20:38
  */
 
-namespace maestroprog\esockets\io;
+namespace Esockets\io;
 
-use maestroprog\esockets\base\Net;
-use maestroprog\esockets\debug\Log;
-use maestroprog\esockets\io\base\Middleware;
+use Esockets\base\Net;
+use Esockets\debug\Log;
+use Esockets\io\base\Aware;
 
-class TcpSocket extends Middleware
+class TcpSocket implements Aware
 {
     /** Интервал времени ожидания между попытками при чтении/записи. */
     const SOCKET_WAIT = 1;
@@ -56,8 +56,6 @@ class TcpSocket extends Middleware
 
     public function __construct(Net $connection)
     {
-        //SOCKET_EAGAIN;
-        //SOCKET_TRY_AGAIN;
         $this->connection = $connection;
         $this->socket = $connection->getConnection();
 
@@ -71,19 +69,13 @@ class TcpSocket extends Middleware
         $try = 0;
         do {
             $data = socket_read($this->socket, $length);
-            #Log::log('data is ' . var_export($data, true) . ' from ' . get_class($this));
             if ($data === false || $data === '') {
                 switch ($this->errorType(socket_last_error($this->socket), self::OP_READ)) {
                     case self::ERROR_NOTHING:
-                        // todo
-                        if ($data === false) {
-                            #Log::log('READ FALSE!!!!');
-                            return false;
-                        } else {
-                            //Log::log('EMPTY!!!!');
-                            //$this->connection->disconnect();
-                            return false;
+                        if (PHP_OS !== 'WINNT') {
+                            $this->connection->disconnect();
                         }
+                        return false;
                         break;
                     case self::ERROR_AGAIN:
                         if ($data === false) {
@@ -94,7 +86,6 @@ class TcpSocket extends Middleware
                             $this->connection->disconnect(); // TODO тут тоже закрыто. выяснить почему???
                             return false;
                         } elseif ($length > 0) {
-                            Log::log('Socket read error: SOCKET_EAGAIN at READING');
                             usleep(self::SOCKET_WAIT);
                         }
                         continue 2;

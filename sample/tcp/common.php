@@ -8,7 +8,6 @@
 
 define('INTERVAL', 1000); // 1ms
 
-date_default_timezone_set('Asia/Yekaterinburg');
 ini_set('display_errors', true);
 error_reporting(E_ALL);
 ini_set('log_errors', true);
@@ -17,7 +16,7 @@ file_put_contents('messages.log', '');
 
 set_time_limit(0);
 
-require __DIR__ . '/../../autoload.php';
+require __DIR__ . '/../../src/bootstrap.php';
 
 function error_type($type)
 {
@@ -55,12 +54,11 @@ function error_type($type)
     }
     return "";
 }
-/*
+
 set_exception_handler(function (Throwable $e) {
-    \maestroprog\esockets\debug\Log::log(sprintf('Вызвана ошибка %d: %s; %s', $e->getCode(), $e->getMessage(), $e->getTraceAsString()));
+    \Esockets\debug\Log::log(sprintf('Вызвана ошибка %d: %s; %s', $e->getCode(), $e->getMessage(), $e->getTraceAsString()));
 });
 
 set_error_handler(function ($errno, $errstr, $errfile, $errline, array $errcontext) {
-    \maestroprog\esockets\debug\Log::log(sprintf('[%s]: %s in %s at %d line', error_type($errno), $errstr, $errfile, $errline));
+    \Esockets\debug\Log::log(sprintf('[%s]: %s in %s at %d line', error_type($errno), $errstr, $errfile, $errline));
 });
-*/

@@ -6,55 +6,94 @@
  * Time: 21:26
  */
 
-namespace maestroprog\esockets;
-
-use TestEnvironment as Env;
-
+namespace Esockets;
 
 class TestEsockets extends \PHPUnit_Framework_TestCase
 {
     private static $peer_accepted = 0;
 
-    public function testServerOpen()
+    public function provider()
     {
-        Env::$server = new Server();
-        $this->assertTrue(Env::$server->connect(), 'Сервер не создаётся');
+        static $data = null;
+        if (is_null($data)) {
+            $data = [[new TcpServer(), new TcpClient()]];
+        }
+        return $data;
     }
 
-    public function testClientConnect()
+    /**
+     * @param $server TcpServer
+     * @param $client TcpClient
+     * @dataProvider provider
+     */
+    public function testServerOpen(TcpServer $server, TcpClient $client)
     {
-        Env::$client = new Client();
-        $this->assertTrue(Env::$client->connect(), 'Клиент не может соединиться');
+        $this->assertTrue($server->connect(), 'Сервер не создаётся');
     }
 
-    public function testServerAcceptClient()
+    /**
+     * @param $server TcpServer
+     * @param $client TcpClient
+     * @dataProvider provider
+     * @depends      testServerOpen
+     */
+    public function testClientConnect(TcpServer $server, TcpClient $client)
     {
-        Env::$server->onConnectPeer(function (Peer $peer) {
+        $this->assertTrue($client->connect(), 'Клиент не может соединиться');
+    }
+
+    /**
+     * @param $server TcpServer
+     * @param $client TcpClient
+     * @dataProvider provider
+     * @depends      testClientConnect
+     */
+    public function testServerAcceptClient(TcpServer $server, TcpClient $client)
+    {
+        $server->onConnectPeer(function (Peer $peer) {
             self::$peer_accepted++;
 
             $peer->onRead([$this, 'serverPeerReceiveData']);
         });
-        Env::$server->listen();
+        $server->listen();
     }
 
-    public function testServerAcceptPeer()
+    /**
+     * @param $server TcpServer
+     * @param $client TcpClient
+     * @dataProvider provider
+     * @depends      testServerAcceptClient
+     */
+    public function testServerAcceptPeer(TcpServer $server, TcpClient $client)
     {
         $this->assertTrue(self::$peer_accepted > 0);
     }
 
     protected static $client_send_msg = 'Hello world';
 
-    public function testClientSendData()
+    /**
+     * @param $server TcpServer
+     * @param $client TcpClient
+     * @dataProvider provider
+     * @depends      testServerAcceptPeer
+     */
+    public function testClientSendData(TcpServer $server, TcpClient $client)
     {
-        $this->assertTrue(Env::$client->send(self::$client_send_msg), 'Клиент не может отправить данные');
+        $this->assertTrue($client->send(self::$client_send_msg), 'Клиент не может отправить данные');
     }
 
     protected static $peer_read_msg = false;
 
-    public function testServerReceiveData()
+    /**
+     * @param $server TcpServer
+     * @param $client TcpClient
+     * @dataProvider provider
+     * @depends      testClientSendData
+     */
+    public function testServerReceiveData(TcpServer $server, TcpClient $client)
     {
-        Env::$server->select();
-        Env::$server->read();
+        $server->select();
+        $server->read();
 
         $this->assertNotFalse(self::$peer_read_msg, 'А сервер ничего не получил!');
         $this->assertEquals(self::$client_send_msg, self::$peer_read_msg, 'Прочитали какую-то хрень');
@@ -65,9 +104,15 @@ class TestEsockets extends \PHPUnit_Framework_TestCase
         self::$peer_read_msg = $msg;
     }
 
-    public function testClientDisconnect()
+    /**
+     * @param $server TcpServer
+     * @param $client TcpClient
+     * @dataProvider provider
+     * @depends      testServerReceiveData
+     */
+    public function testClientDisconnect(TcpServer $server, TcpClient $client)
     {
-        Env::$client->disconnect();
-        $this->assertFalse(Env::$client->is_connected());
+        $client->disconnect();
+        $this->assertFalse($client->is_connected());
     }
 }

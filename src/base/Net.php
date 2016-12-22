@@ -8,13 +8,11 @@
  * Time: 20:42
  */
 
-namespace maestroprog\esockets\base;
+namespace Esockets\base;
 
-use maestroprog\esockets\debug\Log;
-use maestroprog\esockets\io\base\Aware;
-use maestroprog\esockets\io\base\Provider;
-use maestroprog\esockets\io\TcpSocket;
-use maestroprog\esockets\protocol\Easy;
+use Esockets\io\base\Provider;
+use Esockets\io\TcpSocket;
+use Esockets\protocol\Easy;
 
 abstract class Net implements NetInterface
 {
@@ -59,7 +57,6 @@ abstract class Net implements NetInterface
      * @var Provider
      */
     protected $IO;
-
 
     /* event variables */
 
@@ -114,9 +111,11 @@ abstract class Net implements NetInterface
     public function connect()
     {
         $this->createIO();
+
         $addr = null;
         $port = 0;
         socket_getsockname($this->connection, $addr, $port);
+
         $this->set('my_ip', $addr);
         $this->set('my_port', $port);
         $this->getPeerName($addr, $port);
@@ -136,7 +135,7 @@ abstract class Net implements NetInterface
     /**
      * Функция должна создавать интерфейс ввода-вывода.
      *
-     * @return Aware
+     * @return Provider
      */
     final public function createIO()
     {
@@ -158,17 +157,12 @@ abstract class Net implements NetInterface
 
     public function read($need = false)
     {
-        try {
-            if (false === ($data = $this->IO->read($need))) {
-                return false;
-            } elseif (!$need && $data !== null) {
-                $this->_onRead($data);
-            } else {
-                return $data;
-            }
-        } catch (\Throwable $e) {
-            // ????? todo
-            throw $e;
+        if (false === ($data = $this->IO->read($need))) {
+            return false;
+        } elseif (!$need && $data !== null) {
+            $this->_onRead($data);
+        } else {
+            return $data;
         }
         return false;
     }
@@ -176,57 +170,7 @@ abstract class Net implements NetInterface
     public function send($data)
     {
         $this->mid++;
-        try {
-            return $this->IO->send($data);
-        } catch (\Throwable $e) {
-            // ????? todo
-            throw $e;
-        }
-        return false;
-    }
-
-    public function ping()
-    {
-        // todo
-        /*$data = rand(1000, 9999);
-        $this->event_pong = function ($msg) use ($data) {
-            if ($msg === $data) {
-                \maestroprog\esockets\debug\Log::log('ping corrected!');
-            } else {
-                \maestroprog\esockets\debug\Log::log('PING FAIL!');
-            }
-        };
-        $this->_send($data, self::DATA_INT | self::DATA_PING_PONG); // todo
-        \maestroprog\esockets\debug\Log::log('ping sended');*/
-    }
-
-    /**
-     * @todo допилить
-     * @return bool
-     */
-    public function live()
-    {
-        $this->read();
-        if ($this->is_connected()) {
-            $this->live_checked();
-            if (($this->get('live_last_ping') + self::SOCKET_TIMEOUT * 2) <= time())
-                $this->ping() && $this->live_checked('live_last_ping'); // иногда пингуем соединение
-        } elseif ($this->socket_reconnect && $this->get('live_last_check') + self::SOCKET_TIMEOUT > time()) {
-            if ($this->get('live_last_reconnect') + self::SOCKET_RECONNECT <= time()) {
-                if ($this->connect())
-                    $this->live_checked();
-            } else {
-                $this->live_checked('live_last_reconnect');
-            }
-        } else {
-            return false;
-        }
-        return true;
-    }
-
-    private function live_checked($key = 'live_last_check')
-    {
-        $this->set($key, time());
+        return $this->IO->send($data);
     }
 
     abstract protected function _onDisconnect();
@@ -254,31 +198,6 @@ abstract class Net implements NetInterface
     public function setNonBlock()
     {
         socket_set_nonblock($this->connection);
-    }
-
-    /**
-     * @todo
-     * @deprecated
-     * @param $length
-     * @param bool $required
-     * @return bool|string
-     * функция, отвечающая за чтения входящих пакетов данных
-     */
-    private function _read($length, $required = false)
-    {
-    }
-
-    /**
-     * @todo
-     * @deprecated
-     * @param $data
-     * @param int $flag
-     * @return bool
-     * @throws \Exception
-     * функция, отвечающая за отправку пакетов данных
-     */
-    private function _send($data, $flag = 0)
-    {
     }
 
     public function getConnection()
@@ -317,5 +236,49 @@ abstract class Net implements NetInterface
     public function getAddress(): string
     {
         return implode(':', $this->getPeerAddress());
+    }
+
+    public function ping()
+    {
+        // todo
+        /*$data = rand(1000, 9999);
+        $this->event_pong = function ($msg) use ($data) {
+            if ($msg === $data) {
+                \Esockets\debug\Log::log('ping corrected!');
+            } else {
+                \Esockets\debug\Log::log('PING FAIL!');
+            }
+        };
+        $this->_send($data, self::DATA_INT | self::DATA_PING_PONG); // todo
+        \Esockets\debug\Log::log('ping sended');*/
+    }
+
+    /**
+     * @todo допилить
+     * @return bool
+     */
+    public function live()
+    {
+        $this->read();
+        if ($this->is_connected()) {
+            $this->live_checked();
+            if (($this->get('live_last_ping') + self::SOCKET_TIMEOUT * 2) <= time())
+                $this->ping() && $this->live_checked('live_last_ping'); // иногда пингуем соединение
+        } elseif ($this->socket_reconnect && $this->get('live_last_check') + self::SOCKET_TIMEOUT > time()) {
+            if ($this->get('live_last_reconnect') + self::SOCKET_RECONNECT <= time()) {
+                if ($this->connect())
+                    $this->live_checked();
+            } else {
+                $this->live_checked('live_last_reconnect');
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    private function live_checked($key = 'live_last_check')
+    {
+        $this->set($key, time());
     }
 }

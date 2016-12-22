@@ -7,19 +7,26 @@
  * Time: 20:45
  */
 
-namespace maestroprog\esockets\debug;
+namespace Esockets\debug;
 
 final class Log
 {
     protected static $env;
 
-    public static function log($msg)
+    public static function log($message)
     {
         if (self::$env) {
-            $msg = sprintf('{%s}: %s', self::$env, $msg);
+            $message = sprintf('{%s} [%s]: %s', self::$env, date('H:i:s'), $message);
         }
-        echo $msg . PHP_EOL;
-        \error_log($msg);
+        if (PHP_SAPI === 'cli') {
+            fputs(STDERR, $message . PHP_EOL);
+        } else {
+            if (ini_get('log_errors')) {
+                error_log($message);
+            } else {
+                echo $message . '<br>' . PHP_EOL;
+            }
+        }
     }
 
     public static function setEnv($env)

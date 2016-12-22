@@ -6,11 +6,11 @@
  * Time: 22:04
  */
 
-namespace maestroprog\esockets\io\base;
+namespace Esockets\io\base;
 
-use maestroprog\esockets\protocol\base\Aware;
-use maestroprog\esockets\protocol\Dummy;
-use maestroprog\esockets\protocol\Easy;
+use Esockets\protocol\base\Aware as ProtocolAware;
+use Esockets\protocol\Dummy;
+use Esockets\protocol\Easy;
 
 /**
  * Класс-"поставщик" интерфейса ввода/вывода для протокола.
@@ -27,17 +27,16 @@ class Provider
     ];
 
     /**
-     * @var Aware
+     * @var ProtocolAware
      */
     private $protocol;
 
     /**
-     * @var Middleware Класс-посредник между нами, и настоящим владельцем ввода-вывода. :)
-     * @todo так-то он нам не нужен, надо бы убрать его отсюда.
+     * @var Aware Класс-посредник между нами, и настоящим владельцем ввода-вывода. :)
      */
     private $middle;
 
-    public function __construct(string $protocolName, Middleware $middle)
+    public function __construct(string $protocolName, Aware $middle)
     {
         if (!in_array($protocolName, self::PROTOCOLS_KNOW) && !class_exists($protocolName)) {
             throw new \Exception('I don\'t know the protocol');

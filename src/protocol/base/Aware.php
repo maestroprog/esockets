@@ -6,9 +6,9 @@
  * Time: 19:24
  */
 
-namespace maestroprog\esockets\protocol\base;
+namespace Esockets\protocol\base;
 
-use maestroprog\esockets\io\base\Aware as IOAware;
+use Esockets\io\base\Aware as IOAware;
 
 /**
  * Интерфейс, показывающий возможности обмена информацией между клиентами сети.

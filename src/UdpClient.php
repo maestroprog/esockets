@@ -8,8 +8,7 @@
  * Time: 8:55
  */
 
-namespace maestroprog\esockets;
-
+namespace Esockets;
 
 class UdpClient extends TcpClient
 {
@@ -18,15 +17,14 @@ class UdpClient extends TcpClient
         if ($this->socket_domain === AF_UNIX) {
             throw new \Exception('Socket domain cannot be as AF_UNIX');
         }
-        if ($this->connection = socket_create($this->socket_domain, SOCK_DGRAM, $this->socket_domain > 1 ? getprotobyname('udp') : 0)) {
+        $protocol = $this->socket_domain > 1 ? getprotobyname('udp') : 0;
+        if ($this->connection = socket_create($this->socket_domain, SOCK_DGRAM, $protocol)) {
 
             $this->setNonBlock(); // устанавливаем неблокирующий режим работы сокета
 
             parent::connect();
             return $this->connected = true;
         }
-        // @TODO delete next line...
-        trigger_error('Client connect failed', E_USER_ERROR);
         return false;
     }
 }

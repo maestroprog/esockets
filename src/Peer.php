@@ -8,10 +8,9 @@
  * Time: 8:55
  */
 
-namespace maestroprog\esockets;
+namespace Esockets;
 
-
-use maestroprog\esockets\base\Net;
+use Esockets\base\Net;
 
 class Peer extends Net
 {
@@ -41,7 +40,7 @@ class Peer extends Net
      */
     public function __construct(&$connection, $dsc)
     {
-        if (!is_resource($connection) || 'Socket' !== $t = get_resource_type($connection)) {
+        if (!is_resource($connection) || 'Socket' !== ($t = get_resource_type($connection))) {
             throw new \Exception('Given connection not is resource of socket connection');
         }
         $this->connection = $connection;

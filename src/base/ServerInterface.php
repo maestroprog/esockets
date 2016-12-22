@@ -6,12 +6,10 @@
  * Time: 8:35
  */
 
-namespace maestroprog\esockets\base;
-
+namespace Esockets\base;
 
 interface ServerInterface extends NetInterface
 {
-
     /**
      * @return bool
      * открывает входящее соединение
@@ -41,6 +39,7 @@ interface ServerInterface extends NetInterface
     public function read();
 
     /**
+     * @param $data
      * @return int
      * отправляет пакет данных всем пирам по очереди
      * возвращает количество успешно отправленных пакетов

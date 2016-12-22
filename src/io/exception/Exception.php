@@ -6,7 +6,7 @@
  * Time: 20:21
  */
 
-namespace maestroprog\esockets\io\exception;
+namespace Esockets\io\exception;
 
 class Exception
 {

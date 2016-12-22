@@ -6,10 +6,10 @@
  * Time: 20:41
  */
 
-namespace maestroprog\esockets\protocol;
+namespace Esockets\protocol;
 
-use maestroprog\esockets\protocol\base\UseIO;
-use maestroprog\esockets\debug\Log;
+use Esockets\protocol\base\UseIO;
+use Esockets\debug\Log;
 
 class Easy extends UseIO
 {
@@ -24,24 +24,20 @@ class Easy extends UseIO
     const DATA_CONTROL = 128;
 
     public function read(bool $need = false)
-    {// read message meta
+    {
+        // read message meta
         if (($data = $this->provider->read(5)) !== false) {
             list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', $data));
-            Log::log('read length ' . $length);
-            Log::log('flag ' . $flag);
             if ($length > 0) {
-                Log::log('read try ' . $length . ' bytes');
                 if (($data = $this->provider->read($length, true)) !== false) {
 
                 } else {
-                    Log::log('cannot retrieve data');
                     throw new \Exception('Cannot retrieve data');
                 }
             } else {
                 throw new \Exception(sprintf('Not enough length: %d bytes', $length));
             }
 
-            Log::log('data retrieved');
             return $this->unpack($data, $flag);
         }
         return false;

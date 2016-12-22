@@ -8,10 +8,9 @@
  * Time: 8:55
  */
 
-namespace maestroprog\esockets;
+namespace Esockets;
 
-
-use maestroprog\esockets\base\Net;
+use Esockets\base\Net;
 
 class TcpClient extends Net
 {
@@ -21,7 +20,6 @@ class TcpClient extends Net
     protected $connected = false;
 
     /* event variables */
-
     /**
      * @var callable
      */
@@ -57,7 +55,8 @@ class TcpClient extends Net
 
     protected function _connect()
     {
-        if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $this->socket_domain > 1 ? getprotobyname('tcp') : 0)) {
+        $protocol = $this->socket_domain > 1 ? getprotobyname('tcp') : 0;
+        if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $protocol)) {
             if (socket_connect($this->connection, $this->socket_address, $this->socket_port)) {
 
                 parent::connect();
@@ -80,8 +79,6 @@ class TcpClient extends Net
                 }
             }
         }
-        // @TODO delete next line...
-        trigger_error('Client connect failed', E_USER_ERROR);
         return false;
     }
 

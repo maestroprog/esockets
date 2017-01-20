@@ -1,6 +1,6 @@
 <?php
 /**
- * Net Client code snippet
+ * Net Peer code snippet
  *
  * Created by PhpStorm.
  * User: yarullin
@@ -19,17 +19,15 @@ class Peer extends Net
      */
     private $connected = false;
 
-    /* event variables */
+    /**
+     * @var int дескриптор пира
+     */
+    private $dsc;
 
     /**
      * @var array of callable
      */
     private $event_disconnect = [];
-
-    /**
-     * @var int дескриптор пира
-     */
-    private $dsc;
 
 
     /**
@@ -55,7 +53,6 @@ class Peer extends Net
         return $this->connected;
     }
 
-
     public function disconnect()
     {
         $this->connected = false; // как только начали дисконнектиться-ставим флаг
@@ -75,13 +72,13 @@ class Peer extends Net
         }
     }
 
-    public function getDsc()
-    {
-        return $this->dsc;
-    }
-
     protected function getPeerName(string &$addr, int &$port)
     {
         socket_getpeername($this->connection, $addr, $port);
+    }
+
+    public function getDsc()
+    {
+        return $this->dsc;
     }
 }

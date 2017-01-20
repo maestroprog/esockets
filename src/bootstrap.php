@@ -13,7 +13,7 @@ spl_autoload_register(function ($class) {
 
     $path = implode(DIRECTORY_SEPARATOR, $parts);
 
-    $file = stream_resolve_include_path(__DIR__ . DIRECTORY_SEPARATOR . $path . '.php');
+    $file = stream_resolve_include_path($_file = __DIR__ . DIRECTORY_SEPARATOR . $path . '.php');
 
     if ($file !== false) {
         require $file;

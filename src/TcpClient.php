@@ -19,7 +19,6 @@ class TcpClient extends Net
      */
     protected $connected = false;
 
-    /* event variables */
     /**
      * @var callable
      */
@@ -37,7 +36,7 @@ class TcpClient extends Net
 
     public function disconnect()
     {
-        $this->connected = false; // как только начали дисконнектиться - тоже ставим флаг
+        $this->connected = false; // как только начали дисконнектиться - ставим флаг
         parent::disconnect();
     }
 
@@ -69,7 +68,8 @@ class TcpClient extends Net
                 switch ($error) {
                     case SOCKET_ECONNREFUSED:
                     case SOCKET_ENOENT:
-                        // если отсутствует файл сокета, либо соединиться со слушающим сокетом не удалось - возвращаем false
+                        // если отсутствует файл сокета,
+                        // либо соединиться со слушающим сокетом не удалось - возвращаем false
                         $this->disconnect();
                         return false;
                     default:

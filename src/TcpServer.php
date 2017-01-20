@@ -15,7 +15,6 @@ use Esockets\base\ServerInterface;
 
 class TcpServer extends Net implements ServerInterface
 {
-    /* server variables */
     /**
      * @var Peer[]
      */
@@ -30,8 +29,6 @@ class TcpServer extends Net implements ServerInterface
      * @var bool server state
      */
     private $opened = false;
-
-    /* event variables */
 
     /**
      * @var callable
@@ -53,10 +50,8 @@ class TcpServer extends Net implements ServerInterface
      */
     private $event_accept;
 
-    /* other variables */
-
     /**
-     * for double use
+     * for reconnect
      * @var bool
      */
     private $_open_try = false;
@@ -123,9 +118,6 @@ class TcpServer extends Net implements ServerInterface
         }
     }
 
-    /**
-     * close server
-     */
     public function disconnectAll()
     {
 
@@ -146,7 +138,7 @@ class TcpServer extends Net implements ServerInterface
         return false;
     }
 
-    public function read()
+    public function read(bool $need = false)
     {
         foreach ($this->connections as $dsc => $peer) {
             /**
@@ -176,6 +168,34 @@ class TcpServer extends Net implements ServerInterface
              */
             $peer->ping();
         }
+    }
+
+    /**
+     * @return bool
+     */
+    public function live()
+    {
+        $this->read();
+        if ($this->is_connected()) {
+            $this->setTime();
+            $this->listen();
+            $this->read();
+            if (($this->getTime(self::LIVE_LAST_PING) + self::SOCKET_TIMEOUT * 2) <= time()) {
+                // иногда пингуем все соединения
+                $this->ping();
+            }
+        } elseif ($this->socket_reconnect && $this->getTime() + self::SOCKET_TIMEOUT > time()) {
+            if ($this->getTime(self::LIVE_LAST_RECONNECT) + self::SOCKET_RECONNECT <= time()) {
+                if ($this->connect()) {
+                    $this->setTime();
+                }
+            } else {
+                $this->setTime(self::LIVE_LAST_RECONNECT);
+            }
+        } else {
+            return false;
+        }
+        return true;
     }
 
     public function select()

@@ -10,60 +10,37 @@ namespace Esockets\base;
 
 interface ServerInterface extends NetInterface
 {
-    /**
-     * @return bool
-     * открывает входящее соединение
-     * возвращает true при успешном открытии, false при сбое
-     */
-    public function connect();
 
     /**
-     * закрывает входящее соединение
-     */
-    public function disconnect();
-
-    /**
-     * отключает всех пиров
-     */
-    public function disconnectAll();
-
-    /**
-     * слушает входящие соединения
-     * вызывает обработчик события, заданный в onConnectPeer()
+     * Слушает входящие соединения.
+     * Вызывает обработчик события, заданный в onConnectPeer().
      */
     public function listen();
 
     /**
-     * читает входные данные от всех пиров по очереди
-     */
-    public function read();
-
-    /**
-     * @param $data
-     * @return int
-     * отправляет пакет данных всем пирам по очереди
-     * возвращает количество успешно отправленных пакетов
-     */
-    public function send($data);
-
-    /**
+     * Назначает событие соединения клиента.
+     *
      * @param callable $callback
-     * назначает событие соединения клиента
      */
     public function onConnectPeer(callable $callback);
 
     /**
+     * Назначает событие при отсоединении пира.
+     *
      * @param callable $callback
-     * назначает событие при отсоединении пира
      */
     public function onDisconnectPeer(callable $callback);
 
     /**
-     * @param callable $callback
-     * назначает событие при отсоединении всех пиров
+     * Отключает всех пиров, оставляя входящее соединение открытым.
+     */
+    public function disconnectAll();
+
+    /**
+     * Назначает событие при отсоединении всех пиров.
+     * Событие вызывается при отсоединении последнего подключенного пира.
      *
-     * событие вызывается после вызоыва onDisconnectPeer
-     * при отсоединении последнего подключенного пира
+     * @param callable $callback
      */
     public function onDisconnectAll(callable $callback);
 }

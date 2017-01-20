@@ -8,8 +8,8 @@
 
 namespace Esockets\protocol;
 
+use Esockets\base\Ping;
 use Esockets\protocol\base\UseIO;
-use Esockets\debug\Log;
 
 class Easy extends UseIO
 {
@@ -72,9 +72,17 @@ class Easy extends UseIO
                 $flag = self::DATA_ARRAY | self::DATA_JSON;
                 break;
             case 'object':
-                $flag = self::DATA_EXTENDED | self::DATA_JSON;
-                trigger_error('Values of type Object cannot be transmitted on current Net version', E_USER_WARNING);
-                return false;
+                if ($data instanceof Ping) {
+                    $flag = self::DATA_INT | self::DATA_PING_PONG;
+                    if (!$data->isResponse()) {
+                        $flag |= self::DATA_CONTROL;
+                    }
+                    $data = $data->getValue();
+                } else {
+                    //$flag = self::DATA_EXTENDED | self::DATA_JSON;
+                    trigger_error('Values of type Object cannot be transmitted on current Net version', E_USER_WARNING);
+                    return false;
+                }
                 break;
             case 'resource':
                 trigger_error('Values of type Resource cannot be transmitted on current Net version', E_USER_WARNING);
@@ -110,10 +118,9 @@ class Easy extends UseIO
     }
 
     /**
-     * Ф-я распаковывает принятые из сокета данные.
+     * Распаковывает принятые из сокета данные.
      * Возвращает false если распаковка не удалась,
-     *      null если данные не были распакованы по неизвестным причинам
-     *      todo PingMessage
+     * null если данные не были распакованы по неизвестным причинам.
      *
      * @param string $raw
      * @param int $flag
@@ -131,25 +138,16 @@ class Easy extends UseIO
         } else {
             $data = $raw; // simple string
         }
-        /*
-         * todo раскомминтировать и перепилить
-         * @see "todo PingMessage"
-         * if ($flag & self::DATA_CONTROL) {
-            // control message parser
-            // @TODO
-            if ($flag & self::DATA_PING_PONG) {
-                if (is_callable($this->event_pong)) {
-                    call_user_func($this->event_pong, $raw);
-                } else {
-                    Log::log('pong received');
-                }
+
+        if ($flag & self::DATA_PING_PONG) {
+            if ($flag & self::DATA_CONTROL) {
+                $data = new Ping($data, true);
+                $this->send($data);
+                return null;
+            } else {
+                return new Ping($raw, true);
             }
-        } elseif ($flag & self::DATA_PING_PONG) {
-            // отправляем исходные данные "pong" с исходным форматом, дополнительно устанавливая флаг DATA_CONTROL
-            $this->_send($raw, $flag | self::DATA_CONTROL);
-            Log::log('ping received and pong sended');
-            return;
-        }*/
+        }
         return $data;
     }
 }

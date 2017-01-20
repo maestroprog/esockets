@@ -12,11 +12,12 @@ ini_set('display_errors', true);
 error_reporting(E_ALL);
 ini_set('log_errors', true);
 ini_set('error_log', __DIR__ . '/messages.log');
-file_put_contents('messages.log', '');
+file_put_contents(__DIR__ . '/messages.log', '');
 
 set_time_limit(0);
 
 require __DIR__ . '/../../src/bootstrap.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 function error_type($type)
 {

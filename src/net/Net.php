@@ -8,8 +8,9 @@
  * Time: 20:42
  */
 
-namespace Esockets\base;
+namespace Esockets\net;
 
+use Esockets\net\NetInterface;
 use Esockets\debug\Log;
 use Esockets\io\base\Provider;
 use Esockets\io\TcpSocket;
@@ -18,9 +19,7 @@ use Esockets\protocol\Easy;
 abstract class Net implements NetInterface
 {
     const SOCKET_WAIT = 1000; // 1 ms ожидание на повторные операции на сокете
-
     const SOCKET_TIMEOUT = 1;
-
     const SOCKET_RECONNECT = 10; // 10s ожидание перед переподключением
 
     const LIVE_LAST_PING = 'live_last_ping';
@@ -30,23 +29,22 @@ abstract class Net implements NetInterface
     /**
      * @var int type of socket
      */
-    protected $socket_domain = AF_INET;
+    protected $socketDomain = AF_INET;
 
     /**
      * @var string address of socket connection
      */
-    protected $socket_address = '127.0.0.1';
+    protected $socketAddress = '127.0.0.1';
 
     /**
      * @var int port of socket connection
      */
-    protected $socket_port = 8082;
+    protected $socketPort = 8082;
 
     /**
-     * @var bool
-     * automatic reconnect socket for connection broken
+     * @var bool automatic reconnect socket if connection is broken
      */
-    protected $socket_reconnect = false;
+    protected $socketReconnect = false;
 
     /**
      * @var resource of socket connection
@@ -61,35 +59,37 @@ abstract class Net implements NetInterface
     /**
      * @var Provider
      */
-    protected $IO;
+    private $ioProvider;
 
     /**
      * @var callable
      */
-    private $event_read;
+    private $eventRead;
 
     /**
      * @var callable
      */
-    private $event_pong;
+    private $eventPong;
 
     /**
-     * @var int
-     * auto increment message id
-     * #for send
+     * @var int auto increment message id #for send
      */
     private $mid = 0;
 
     public function __construct($config = [])
     {
-        foreach ($config as $key => $val)
-            if (isset($this->{$key})) $this->{$key} = $val;
+        foreach ($config as $key => $val) {
+            if (isset($this->{$key})) {
+                $this->{$key} = $val;
+            }
+        }
     }
 
     /**
+     * Get user variable.
+     *
      * @param $name
      * @return bool
-     * get user variable
      */
     public function get($name)
     {
@@ -97,9 +97,10 @@ abstract class Net implements NetInterface
     }
 
     /**
+     * Set user variable.
+     *
      * @param $name
      * @param $value
-     * set user variable
      */
     public function set($name, $value)
     {
@@ -107,6 +108,8 @@ abstract class Net implements NetInterface
     }
 
     /**
+     * Connect to socket.
+     *
      * @return bool
      */
     public function connect()
@@ -145,8 +148,8 @@ abstract class Net implements NetInterface
      */
     final public function createIO()
     {
-        $this->IO or $this->IO = new Provider(Easy::class, new TcpSocket($this));
-        return $this->IO;
+        $this->ioProvider or $this->ioProvider = new Provider(Easy::class, new TcpSocket($this));
+        return $this->ioProvider;
     }
 
     public function disconnect()
@@ -163,7 +166,7 @@ abstract class Net implements NetInterface
 
     public function read(bool $need = false)
     {
-        if (false === ($data = $this->IO->read($need))) {
+        if (false === ($data = $this->ioProvider->read($need))) {
             return false;
         } elseif (!$need && $data !== null) {
             $this->_onRead($data);
@@ -176,24 +179,24 @@ abstract class Net implements NetInterface
     public function send($data)
     {
         $this->mid++;
-        return $this->IO->send($data);
+        return $this->ioProvider->send($data);
     }
 
     abstract protected function _onDisconnect();
 
     public function onRead(callable $callback)
     {
-        $this->event_read = $callback;
+        $this->eventRead = $callback;
     }
 
     protected function _onRead(&$data)
     {
-        if (is_object($data) && $data instanceof Ping) {
-            if (is_callable($this->event_pong)) {
-                call_user_func($this->event_pong, $data);
+        if (is_object($data) && $data instanceof PingPacket) {
+            if (is_callable($this->eventPong)) {
+                call_user_func($this->eventPong, $data);
             }
-        } elseif (is_callable($this->event_read)) {
-            call_user_func_array($this->event_read, [$data]);
+        } elseif (is_callable($this->eventRead)) {
+            call_user_func_array($this->eventRead, [$data]);
             return true;
         } else {
             return false;
@@ -217,7 +220,7 @@ abstract class Net implements NetInterface
 
     public function getPeerAddress(): array
     {
-        if ($this->socket_domain === AF_INET) {
+        if ($this->socketDomain === AF_INET) {
             return [
                 $this->get('peer_ip'),
                 $this->get('peer_port')
@@ -231,7 +234,7 @@ abstract class Net implements NetInterface
 
     public function getMyAddress(): array
     {
-        if ($this->socket_domain === AF_INET) {
+        if ($this->socketDomain === AF_INET) {
             return [
                 $this->get('my_ip'),
                 $this->get('my_port')
@@ -250,16 +253,16 @@ abstract class Net implements NetInterface
 
     public function ping()
     {
-        if ($this->event_pong) return;
+        if ($this->eventPong) return;
 
-        $ping = new Ping(rand(1000, 9999), false);
-        $this->event_pong = function (Ping $msg) use ($ping) {
+        $ping = new PingPacket(rand(1000, 9999), false);
+        $this->eventPong = function (PingPacket $msg) use ($ping) {
             if ($msg->getValue() !== $ping->getValue()) {
                 throw new \Exception('Incorrect ping data');
             } else {
                 $this->setTime(self::LIVE_LAST_PING);
             }
-            $this->event_pong;
+            $this->eventPong;
         };
         $this->send($ping);
         unset($ping);
@@ -277,7 +280,7 @@ abstract class Net implements NetInterface
                 // иногда пингуем соединение
                 $this->ping();
             }
-        } elseif ($this->socket_reconnect && $this->getTime() + self::SOCKET_TIMEOUT > time()) {
+        } elseif ($this->socketReconnect && $this->getTime() + self::SOCKET_TIMEOUT > time()) {
             if ($this->getTime(self::LIVE_LAST_RECONNECT) + self::SOCKET_RECONNECT <= time()) {
                 if ($this->connect()) {
                     $this->setTime();

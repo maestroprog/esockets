@@ -8,10 +8,13 @@
 
 namespace Esockets\protocol;
 
-use Esockets\base\Ping;
+use Esockets\base\PingPacket;
 use Esockets\protocol\base\UseIO;
 
-class Easy extends UseIO
+/**
+ * "Легкий" протокол.
+ */
+final class Easy extends UseIO
 {
     const DATA_RAW = 0;
     const DATA_JSON = 1;
@@ -72,7 +75,7 @@ class Easy extends UseIO
                 $flag = self::DATA_ARRAY | self::DATA_JSON;
                 break;
             case 'object':
-                if ($data instanceof Ping) {
+                if ($data instanceof PingPacket) {
                     $flag = self::DATA_INT | self::DATA_PING_PONG;
                     if (!$data->isResponse()) {
                         $flag |= self::DATA_CONTROL;
@@ -99,10 +102,11 @@ class Easy extends UseIO
             default:
                 $flag |= self::DATA_STRING;
         }
-        if ($flag & self::DATA_JSON)
+        if ($flag & self::DATA_JSON) {
             $raw = json_encode($data);
-        else
+        } else {
             $raw = $data;
+        }
         // начиная с этого момента исходная "$data" становится "$raw"
         $length = strlen($raw);
         if ($length >= 0xffff) { // 65535 bytes
@@ -141,11 +145,11 @@ class Easy extends UseIO
 
         if ($flag & self::DATA_PING_PONG) {
             if ($flag & self::DATA_CONTROL) {
-                $data = new Ping($data, true);
+                $data = new PingPacket($data, true);
                 $this->send($data);
                 return null;
             } else {
-                return new Ping($raw, true);
+                return new PingPacket($raw, true);
             }
         }
         return $data;

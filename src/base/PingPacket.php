@@ -2,7 +2,7 @@
 
 namespace Esockets\base;
 
-final class Ping
+final class PingPacket
 {
     private $value;
     private $response;

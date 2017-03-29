@@ -8,9 +8,9 @@
  * Time: 19:48
  */
 
-namespace Esockets;
+namespace Esockets\net;
 
-use Esockets\base\Net;
+use Esockets\net\Net;
 use Esockets\base\ServerInterface;
 
 class TcpServer extends Net implements ServerInterface
@@ -66,10 +66,10 @@ class TcpServer extends Net implements ServerInterface
     {
         if ($this->is_connected()) return true;
 
-        $protocol = $this->socket_domain > 1 ? getprotobyname('tcp') : 0;
-        if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $protocol)) {
+        $protocol = $this->socketDomain > 1 ? getprotobyname('tcp') : 0;
+        if ($this->connection = socket_create($this->socketDomain, SOCK_STREAM, $protocol)) {
             socket_set_option($this->connection, SOL_SOCKET, SO_REUSEADDR, 1);
-            if (socket_bind($this->connection, $this->socket_address, $this->socket_port)) {
+            if (socket_bind($this->connection, $this->socketAddress, $this->socketPort)) {
                 if (socket_listen($this->connection)) {
                     socket_set_nonblock($this->connection);
                     $this->_open_try = false; // сбрасываем флаг попытки открыть сервер
@@ -109,11 +109,11 @@ class TcpServer extends Net implements ServerInterface
         if ($this->opened)
             parent::disconnect();
         $this->opened = false;
-        if ($this->socket_domain === AF_UNIX) {
-            if (file_exists($this->socket_address)) {
-                unlink($this->socket_address);
+        if ($this->socketDomain === AF_UNIX) {
+            if (file_exists($this->socketAddress)) {
+                unlink($this->socketAddress);
             } else {
-                trigger_error(sprintf('Pipe file "%s" not found', $this->socket_address));
+                trigger_error(sprintf('Pipe file "%s" not found', $this->socketAddress));
             }
         }
     }
@@ -184,7 +184,7 @@ class TcpServer extends Net implements ServerInterface
                 // иногда пингуем все соединения
                 $this->ping();
             }
-        } elseif ($this->socket_reconnect && $this->getTime() + self::SOCKET_TIMEOUT > time()) {
+        } elseif ($this->socketReconnect && $this->getTime() + self::SOCKET_TIMEOUT > time()) {
             if ($this->getTime(self::LIVE_LAST_RECONNECT) + self::SOCKET_RECONNECT <= time()) {
                 if ($this->connect()) {
                     $this->setTime();
@@ -299,7 +299,7 @@ class TcpServer extends Net implements ServerInterface
 
     protected function getPeerName(string &$addr, int &$port)
     {
-        $addr = $this->socket_address;
-        $port = $this->socket_port;
+        $addr = $this->socketAddress;
+        $port = $this->socketPort;
     }
 }

@@ -8,12 +8,12 @@
 
 namespace Esockets\protocol\base;
 
-use Esockets\io\base\Aware as IOAware;
+use Esockets\io\base\IoAwareInterface;
 
-abstract class UseIO implements Aware
+abstract class UseIO implements AwareInterface
 {
     /**
-     * @var IOAware
+     * @var IoAwareInterface
      */
     protected $provider;
 
@@ -22,7 +22,7 @@ abstract class UseIO implements Aware
      *
      * @inheritdoc
      */
-    public function __construct(IOAware $Provider)
+    public function __construct(IoAwareInterface $Provider)
     {
         $this->provider = $Provider;
     }

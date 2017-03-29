@@ -8,12 +8,12 @@
 
 namespace Esockets\protocol\base;
 
-use Esockets\io\base\Aware as IOAware;
+use Esockets\io\base\IoAwareInterface as IOAware;
 
 /**
  * Интерфейс, показывающий возможности обмена информацией между клиентами сети.
  */
-interface Aware
+interface AwareInterface
 {
     /**
      * Для создания класса нам потребуется поставщик ввода/вывода.

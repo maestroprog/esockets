@@ -8,9 +8,9 @@
  * Time: 8:55
  */
 
-namespace Esockets;
+namespace Esockets\net;
 
-use Esockets\base\Net;
+use Esockets\net\Net;
 
 class TcpClient extends Net
 {
@@ -54,9 +54,9 @@ class TcpClient extends Net
 
     protected function _connect()
     {
-        $protocol = $this->socket_domain > 1 ? getprotobyname('tcp') : 0;
-        if ($this->connection = socket_create($this->socket_domain, SOCK_STREAM, $protocol)) {
-            if (socket_connect($this->connection, $this->socket_address, $this->socket_port)) {
+        $protocol = $this->socketDomain > 1 ? getprotobyname('tcp') : 0;
+        if ($this->connection = socket_create($this->socketDomain, SOCK_STREAM, $protocol)) {
+            if (socket_connect($this->connection, $this->socketAddress, $this->socketPort)) {
 
                 parent::connect();
                 $this->setNonBlock(); // устанавливаем неблокирующий режим работы сокета
@@ -84,7 +84,7 @@ class TcpClient extends Net
 
     protected function getPeerName(string &$addr, int &$port)
     {
-        $addr = $this->socket_address;
-        $port = $this->socket_port;
+        $addr = $this->socketAddress;
+        $port = $this->socketPort;
     }
 }

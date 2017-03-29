@@ -8,39 +8,23 @@
 
 namespace Esockets\base;
 
-interface ServerInterface extends NetInterface
+interface ServerInterface extends ConnectorInterface, ConnectionsFinderInterface, BroadcastingInterface
 {
-
-    /**
-     * Слушает входящие соединения.
-     * Вызывает обработчик события, заданный в onConnectPeer().
-     */
-    public function listen();
-
-    /**
-     * Назначает событие соединения клиента.
-     *
-     * @param callable $callback
-     */
-    public function onConnectPeer(callable $callback);
-
-    /**
-     * Назначает событие при отсоединении пира.
-     *
-     * @param callable $callback
-     */
-    public function onDisconnectPeer(callable $callback);
-
     /**
      * Отключает всех пиров, оставляя входящее соединение открытым.
+     *
+     * @return void
      */
     public function disconnectAll();
 
     /**
-     * Назначает событие при отсоединении всех пиров.
-     * Событие вызывается при отсоединении последнего подключенного пира.
+     * Назначает обработчик события отсоединения всех пиров.
+     * Обработчик вызывается при отсоединении последнего подключенного пира.
      *
      * @param callable $callback
+     * @return void
      */
     public function onDisconnectAll(callable $callback);
+
+    public function
 }

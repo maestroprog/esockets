@@ -9,17 +9,17 @@
 namespace Esockets\io\base;
 
 /**
- * Интерфейс, показывающий возможности ввода/вывода.
+ * Интерфейс, описывающий возможности ввода/вывода.
  * Для обеспечения ввода-вывода необходимо его реализовать.
  * Реализованный протокол использует данный интерфейс для омбена информацией.
  */
-interface Aware
+interface IoAwareInterface
 {
     /**
      * Функция, предоставляющая доступ к IO для чтения.
      * Должна использоваться протокол провайдером.
      *
-     * @see Aware::read()
+     * @see IoAwareInterface::read()
      * @param int $length
      * @param bool $need
      * @return mixed
@@ -33,7 +33,7 @@ interface Aware
      *      Берём по ссылке чтобы лишний раз не копировать.
      * Возвращает true в случае успеха, иначе false.
      *
-     * @see Aware::send()
+     * @see IoAwareInterface::send()
      * @param string $data
      * @return bool
      */

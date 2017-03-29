@@ -8,7 +8,7 @@
 
 namespace Esockets\io\base;
 
-use Esockets\protocol\base\Aware as ProtocolAware;
+use Esockets\protocol\base\AwareInterface as ProtocolAware;
 use Esockets\protocol\Dummy;
 use Esockets\protocol\Easy;
 
@@ -16,10 +16,10 @@ use Esockets\protocol\Easy;
  * Класс-"поставщик" интерфейса ввода/вывода для протокола.
  * Через этот класс идёт весь ввод/вывод.
  * Этот класс нужно создавать для использования в качестве интерфейса ввода/вывода!
- * То есть
- * @example     $provider = new Provider(Dummy::class, new Dummy());
+ *
+ * @example $provider = new Provider(Dummy::class, new Dummy());
  */
-class Provider
+final class Provider
 {
     const PROTOCOLS_KNOW = [
         Dummy::class,
@@ -32,11 +32,11 @@ class Provider
     private $protocol;
 
     /**
-     * @var Aware Класс-посредник между нами, и настоящим владельцем ввода-вывода. :)
+     * @var IoAwareInterface Класс-посредник между нами, и настоящим владельцем ввода-вывода. :)
      */
     private $middle;
 
-    public function __construct(string $protocolName, Aware $middle)
+    public function __construct(string $protocolName, IoAwareInterface $middle)
     {
         if (!in_array($protocolName, self::PROTOCOLS_KNOW) && !class_exists($protocolName)) {
             throw new \Exception('I don\'t know the protocol');

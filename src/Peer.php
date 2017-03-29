@@ -10,9 +10,11 @@
 
 namespace Esockets;
 
-use Esockets\base\Net;
+use Esockets\base\ClientInterface;
+use Esockets\base\ServerInterface;
+use Esockets\net\Net;
 
-class Peer extends Net
+final class Peer extends Net implements ClientInterface
 {
     /**
      * @var bool connection state

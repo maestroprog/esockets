@@ -8,9 +8,12 @@
 
 namespace Esockets\io;
 
-use Esockets\io\base\Aware;
+use Esockets\io\base\IoAwareInterface;
 
-class Dummy implements Aware
+/**
+ * Класс-заглушка ввода-вывода.
+ */
+final class Dummy implements IoAwareInterface
 {
     public function read(int $length, bool $need = false)
     {

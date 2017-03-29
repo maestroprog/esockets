@@ -19,17 +19,34 @@ interface NetInterface
     public function connect();
 
     /**
+     * Закрывает соединение.
+     *
+     * @return void
+     */
+    public function disconnect();
+
+    /**
+     * Назначает обработчик события отсоединения.
+     *
+     * @param callable $callback
+     * @return void
+     */
+    public function onDisconnect(callable $callback);
+
+    /**
      * Читает поступившие данные из сети.
      * Дожидается поступления данных, если необходимо.
      *
      * @param bool $need
+     * @return void
      */
     public function read(bool $need = false);
 
     /**
-     * Назначает событие при чтении данных
+     * Назначает обработчик события поступления данных для чтения.
      *
      * @param callable $callback
+     * @return void
      */
     public function onRead(callable $callback);
 
@@ -43,31 +60,20 @@ interface NetInterface
     public function send($data);
 
     /**
-     * Функция, обеспечивающая жизнь сокету.
+     * Поддерживает жизнь соединения.
      * Что делает:
      * - контролирует текущее состояние соединения,
      * - проверяет связь с заданным интервалом,
      * - выполняет чтение входящих данных,
-     * - выполняет переподключение при обрыве связи.
+     * - выполняет переподключение при обрыве связи, если это включено,
+     *
      * Возвращает true, если сокет жив, false если не работает.
      * Можно использовать в бесконечном цикле:
-     * while (Net->live()) {
-     *  Net->send(data);
+     * while ($NET->live()) {
+     *     // тут делаем что-то.
      * }
      *
      * @return bool
      */
-    function live();
-
-    /**
-     * Закрывает соединение.
-     */
-    public function disconnect();
-
-    /**
-     * Назначает событие при отсоединении.
-     *
-     * @param callable $callback
-     */
-    public function onDisconnect(callable $callback);
+    public function live();
 }

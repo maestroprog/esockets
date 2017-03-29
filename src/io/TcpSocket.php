@@ -8,11 +8,11 @@
 
 namespace Esockets\io;
 
-use Esockets\base\Net;
+use Esockets\net\Net;
 use Esockets\debug\Log;
-use Esockets\io\base\Aware;
+use Esockets\io\base\IoAwareInterface;
 
-class TcpSocket implements Aware
+final class TcpSocket implements IoAwareInterface
 {
     /** Интервал времени ожидания между попытками при чтении/записи. */
     const SOCKET_WAIT = 1;
@@ -22,7 +22,7 @@ class TcpSocket implements Aware
     const ERROR_AGAIN = 1;      // ошибка, просьба повторить операцию
     const ERROR_SKIP = 2;       // ошибка, просьба пропустить операцию
     const ERROR_FATAL = 4;      // фатальная ошибка
-    const ERROR_UNKNOWN = 8;    // неизвестная необработываемая ошибка
+    const ERROR_UNKNOWN = 8;    // неизвестная необрабатываемая ошибка
 
     /** Константы операций ввода/вывода. */
     const OP_READ = 0;

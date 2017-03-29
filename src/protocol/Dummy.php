@@ -15,7 +15,7 @@ class Dummy extends UseIO
     /**
      * @inheritdoc
      */
-    function read(bool $need = false)
+    public function read(bool $need = false)
     {
         return $this->provider->read(0, $need);
     }
@@ -23,7 +23,7 @@ class Dummy extends UseIO
     /**
      * @inheritdoc
      */
-    function send(&$data): bool
+    public function send(&$data): bool
     {
         return $this->provider->send($data);
     }

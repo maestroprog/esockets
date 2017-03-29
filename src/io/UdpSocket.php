@@ -8,11 +8,11 @@
 
 namespace Esockets\io;
 
-use Esockets\base\Net;
+use Esockets\net\Net;
 use Esockets\debug\Log;
-use Esockets\io\base\Aware;
+use Esockets\io\base\IoAwareInterface;
 
-class UdpSocket implements Aware
+final class UdpSocket implements IoAwareInterface
 {
     /**
      * @var Net

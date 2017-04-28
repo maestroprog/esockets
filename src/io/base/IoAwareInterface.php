@@ -2,12 +2,15 @@
 
 namespace Esockets\io\base;
 
+use Esockets\base\ReaderInterface;
+use Esockets\base\SenderInterface;
+
 /**
  * Интерфейс, описывающий возможности ввода/вывода.
  * Для обеспечения ввода-вывода необходимо его реализовать.
  * Реализованный протокол использует данный интерфейс для омбена информацией.
  */
-interface IoAwareInterface
+interface IoAwareInterface extends ReaderInterface, SenderInterface
 {
     /**
      * Функция, предоставляющая доступ к IO для чтения.

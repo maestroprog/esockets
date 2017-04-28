@@ -14,7 +14,7 @@ use Esockets\protocol\Easy;
  *
  * @example $provider = new Provider(Dummy::class, new Dummy());
  */
-final class Provider
+final class Provider implements IoAwareInterface
 {
     const PROTOCOLS_KNOW = [
         Dummy::class,

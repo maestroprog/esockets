@@ -6,7 +6,7 @@ namespace Esockets\net;
 use Esockets\net\Net;
 use Esockets\base\AbstractServer;
 
-class TcpAbstractServer extends Net implements AbstractServer
+class TcpServer extends AbstractServer
 {
     /**
      * @var Peer[]

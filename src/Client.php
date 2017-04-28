@@ -13,6 +13,5 @@ final class Client extends AbstractClient
     {
         $this->connection = $client;
     }
-
-
+    
 }

@@ -14,9 +14,9 @@ interface AwareInterface
      * Для создания класса нам потребуется поставщик ввода/вывода.
      *
      * Aware constructor.
-     * @param IOAware $Provider
+     * @param IOAware $provider
      */
-    public function __construct(IOAware $Provider);
+    public function __construct(IOAware $provider);
 
     /**
      * Функция пробует прочитать данные из сокета.

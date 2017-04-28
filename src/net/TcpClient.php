@@ -6,7 +6,7 @@ namespace Esockets\net;
 use Esockets\base\AbstractClient;
 use Esockets\net\Net;
 
-final class TcpAbstractClient extends AbstractClient
+final class TcpClient extends AbstractClient
 {
     /**
      * @var bool connection state

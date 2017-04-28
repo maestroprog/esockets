@@ -3,9 +3,10 @@
 namespace Esockets\net;
 
 
+use Esockets\base\AbstractClient;
 use Esockets\net\Net;
 
-class UdpClient extends Net
+class UdpClient extends AbstractClient
 {
     protected function _connect()
     {

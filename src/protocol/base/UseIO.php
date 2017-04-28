@@ -17,8 +17,8 @@ abstract class UseIO implements AwareInterface
      *
      * @inheritdoc
      */
-    public function __construct(IoAwareInterface $Provider)
+    public function __construct(IoAwareInterface $provider)
     {
-        $this->provider = $Provider;
+        $this->provider = $provider;
     }
 }

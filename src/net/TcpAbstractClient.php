@@ -1,18 +1,12 @@
 <?php
-/**
- * Net Client code snippet
- *
- * Created by PhpStorm.
- * User: yarullin
- * Date: 02.10.2015
- * Time: 8:55
- */
 
 namespace Esockets\net;
 
+
+use Esockets\base\AbstractClient;
 use Esockets\net\Net;
 
-class TcpClient extends Net
+final class TcpAbstractClient extends AbstractClient
 {
     /**
      * @var bool connection state

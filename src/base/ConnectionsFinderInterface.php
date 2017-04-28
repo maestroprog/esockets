@@ -1,14 +1,8 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: maestroprog
- * Date: 22.03.2017
- * Time: 19:45
- */
 
 namespace Esockets\base;
 
-// todo смотри в тетрадку
+
 interface ConnectionsFinderInterface
 {
     /**

@@ -1,19 +1,12 @@
 <?php
-/**
- * Server Net code snippet
- *
- * Created by PhpStorm.
- * User: Руслан
- * Date: 01.10.2015
- * Time: 19:48
- */
 
 namespace Esockets\net;
 
-use Esockets\net\Net;
-use Esockets\base\ServerInterface;
 
-class TcpServer extends Net implements ServerInterface
+use Esockets\net\Net;
+use Esockets\base\AbstractServer;
+
+class TcpAbstractServer extends Net implements AbstractServer
 {
     /**
      * @var Peer[]

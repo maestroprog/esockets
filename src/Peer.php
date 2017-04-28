@@ -1,20 +1,13 @@
 <?php
-/**
- * Net Peer code snippet
- *
- * Created by PhpStorm.
- * User: yarullin
- * Date: 02.10.2015
- * Time: 8:55
- */
 
 namespace Esockets;
 
-use Esockets\base\ClientInterface;
-use Esockets\base\ServerInterface;
+
+use Esockets\base\AbstractClient;
+use Esockets\base\AbstractServer;
 use Esockets\net\Net;
 
-final class Peer extends Net implements ClientInterface
+final class Peer extends Net implements AbstractClient
 {
     /**
      * @var bool connection state

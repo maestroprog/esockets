@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 18.10.16
- * Time: 21:24
- */
 
 namespace Esockets\io\base;
 

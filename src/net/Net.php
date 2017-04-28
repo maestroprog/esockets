@@ -1,14 +1,7 @@
 <?php
-/**
- ** Net common class.
- *
- * Created by PhpStorm.
- * User: Руслан
- * Date: 22.09.2015
- * Time: 20:42
- */
 
 namespace Esockets\net;
+
 
 use Esockets\net\NetInterface;
 use Esockets\debug\Log;

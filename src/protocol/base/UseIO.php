@@ -1,12 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 18.10.16
- * Time: 20:43
- */
 
 namespace Esockets\protocol\base;
+
 
 use Esockets\io\base\IoAwareInterface;
 

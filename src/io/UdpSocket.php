@@ -1,12 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 26.10.16
- * Time: 21:12
- */
 
 namespace Esockets\io;
+
 
 use Esockets\net\Net;
 use Esockets\debug\Log;

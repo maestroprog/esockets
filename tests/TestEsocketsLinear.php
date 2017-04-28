@@ -2,6 +2,7 @@
 
 namespace Esockets;
 
+
 class TestEsockets extends \PHPUnit_Framework_TestCase
 {
     private static $peer_accepted = 0;

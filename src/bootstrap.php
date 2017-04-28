@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Руслан
- * Date: 22.12.2016
- * Time: 3:42
- */
 
 spl_autoload_register(function ($class) {
     $parts = explode('\\', $class);

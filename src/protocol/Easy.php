@@ -1,12 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 18.10.16
- * Time: 20:41
- */
 
 namespace Esockets\protocol;
+
 
 use Esockets\base\PingPacket;
 use Esockets\protocol\base\UseIO;

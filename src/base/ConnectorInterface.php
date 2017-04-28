@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: maestroprog
- * Date: 22.03.2017
- * Time: 19:41
- */
 
 namespace Esockets\base;
 
@@ -19,6 +13,8 @@ interface ConnectorInterface
     public function connect(string $ip, int $port);
 
     public function onConnect(callable $callback);
+
+    public function isConnected(): bool;
 
     public function disconnect();
 

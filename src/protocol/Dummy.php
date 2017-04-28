@@ -1,12 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Руслан
- * Date: 15.10.2016
- * Time: 19:24
- */
 
 namespace Esockets\protocol;
+
 
 use Esockets\protocol\base\UseIO;
 

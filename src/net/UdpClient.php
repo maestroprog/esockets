@@ -1,14 +1,7 @@
 <?php
-/**
- * Net Client code snippet
- *
- * Created by PhpStorm.
- * User: yarullin
- * Date: 02.10.2015
- * Time: 8:55
- */
 
 namespace Esockets\net;
+
 
 use Esockets\net\Net;
 

@@ -1,12 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Руслан
- * Date: 16.10.2016
- * Time: 22:04
- */
 
 namespace Esockets\io\base;
+
 
 use Esockets\protocol\base\AwareInterface as ProtocolAware;
 use Esockets\protocol\Dummy;

@@ -2,12 +2,11 @@
 
 namespace Esockets\base;
 
-
 abstract class AbstractServer implements
     ConnectorInterface,
-    ConnectionSupportInterface,
     ConnectionsFinderInterface,
-    BroadcastingInterface
+    BroadcastingInterface,
+    BlockingInterface
 {
     /**
      * Отключает всех пиров, оставляя входящее соединение открытым.

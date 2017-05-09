@@ -2,17 +2,17 @@
 
 namespace Esockets\base;
 
-
 interface ConnectorInterface
 {
     /**
-     * @param string $ip
-     * @param int $port
+     * @param AbstractAddress $address
      * @return void
      */
-    public function connect(string $ip, int $port);
+    public function connect(AbstractAddress $address);
 
     public function onConnect(callable $callback);
+
+    public function reconnect(): bool;
 
     public function isConnected(): bool;
 

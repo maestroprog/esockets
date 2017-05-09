@@ -2,12 +2,15 @@
 
 namespace Esockets\net;
 
-
-use Esockets\net\Net;
+use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractServer;
+use Esockets\base\exception\ConnectionException;
 
-class TcpServer extends AbstractServer
+final class TcpServer extends AbstractServer
 {
+    protected $socket;
+    protected $connected = false;
+
     /**
      * @var Peer[]
      */
@@ -50,44 +53,65 @@ class TcpServer extends AbstractServer
     private $_open_try = false;
 
     /**
-     * @see parent::connect(); Серверу не нужен ввод/вывод, поэтому он не будет вызывать родительский коннект.
-     *
-     * @return bool
-     * @throws \Exception
+     * @inheritDoc
      */
-    public function connect()
+    public function __construct(int $socketDomain)
     {
-        if ($this->is_connected()) return true;
+        if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
+            throw new ConnectionException(socket_strerror(socket_last_error()));
+        }
 
-        $protocol = $this->socketDomain > 1 ? getprotobyname('tcp') : 0;
-        if ($this->connection = socket_create($this->socketDomain, SOCK_STREAM, $protocol)) {
-            socket_set_option($this->connection, SOL_SOCKET, SO_REUSEADDR, 1);
-            if (socket_bind($this->connection, $this->socketAddress, $this->socketPort)) {
-                if (socket_listen($this->connection)) {
-                    socket_set_nonblock($this->connection);
-                    $this->_open_try = false; // сбрасываем флаг попытки открыть сервер
-                    return $this->opened = true;
-                } else {
-                    throw new \Exception(socket_strerror(socket_last_error($this->connection)));
-                }
+        socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
+    }
+
+
+    public function connect(AbstractAddress $listenAddress)
+    {
+        if ($this->connected) {
+            throw new \LogicException('Socket is already connected.');
+        }
+        if ($this->isConnected() && $listenAddress instanceof Ipv4Address) {
+            if (socket_connect($this->socket, $listenAddress->getIp(), $listenAddress->getPort())) {
+                $this->connected = true;
+            }
+        } elseif ($this->isUnixAddress() && $listenAddress instanceof UnixAddress) {
+            if (socket_connect($this->socket, $listenAddress->getSockPath())) {
+                $this->connected = true;
+            }
+        } else {
+            throw new \LogicException('Unknown socket address.');
+        }
+
+        if (!$this->connected) {
+            $this->handleError();
+        }
+
+        if (socket_bind($this->socket, $listenAddress->getIp(), $listenAddress->getPort())) {
+            if (socket_listen($this->socket)) {
+                $this->unblock();
+                $this->_open_try = false; // сбрасываем флаг попытки открыть сервер
+                return $this->opened = true;
             } else {
-                $error = socket_last_error($this->connection);
-                socket_clear_error($this->connection);
-                switch ($error) {
-                    case SOCKET_EADDRINUSE:
-                        // если сокет уже открыт - пробуем его закрыть и снова открыть
-                        // closing socket and try restart
-                        $this->disconnect();
-                        if (!$this->_open_try) {
-                            $this->_open_try = true;
-                            return $this->connect();
-                        }
-                        break;
-                    default:
-                        throw new \Exception(socket_strerror($error));
-                }
+                throw new ConnectionException(socket_strerror(socket_last_error($this->socket)));
+            }
+        } else {
+            $error = socket_last_error($this->connection);
+            socket_clear_error($this->connection);
+            switch ($error) {
+                case SOCKET_EADDRINUSE:
+                    // если сокет уже открыт - пробуем его закрыть и снова открыть
+                    // closing socket and try restart
+                    $this->disconnect();
+                    if (!$this->_open_try) {
+                        $this->_open_try = true;
+                        return $this->connect();
+                    }
+                    break;
+                default:
+                    throw new \Exception(socket_strerror($error));
             }
         }
+
         return false;
     }
 

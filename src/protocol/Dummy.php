@@ -2,10 +2,9 @@
 
 namespace Esockets\protocol;
 
+use Esockets\base\AbstractProtocol;
 
-use Esockets\protocol\base\UseIO;
-
-class Dummy extends UseIO
+final class Dummy extends AbstractProtocol
 {
     /**
      * @inheritdoc

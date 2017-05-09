@@ -1,11 +1,8 @@
 <?php
 
-namespace Esockets\protocol\base;
+namespace Esockets\base;
 
-
-use Esockets\io\base\IoAwareInterface;
-
-abstract class UseIO implements AwareInterface
+abstract class AbstractProtocol implements ReaderInterface, SenderInterface
 {
     /**
      * @var IoAwareInterface

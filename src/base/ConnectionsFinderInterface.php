@@ -2,7 +2,6 @@
 
 namespace Esockets\base;
 
-
 interface ConnectionsFinderInterface
 {
     /**

@@ -17,7 +17,6 @@ file_put_contents(__DIR__ . '/messages.log', '');
 set_time_limit(0);
 
 require __DIR__ . '/../../src/bootstrap.php';
-require __DIR__ . '/../../vendor/autoload.php';
 
 function error_type($type)
 {

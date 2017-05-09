@@ -2,12 +2,11 @@
 
 namespace Esockets;
 
-
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractServer;
 use Esockets\net\Net;
 
-final class Peer extends Net implements AbstractClient
+class Peer extends Client
 {
     /**
      * @var bool connection state

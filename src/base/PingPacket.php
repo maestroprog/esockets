@@ -2,18 +2,17 @@
 
 namespace Esockets\base;
 
-
 final class PingPacket
 {
     private $value;
     private $response;
 
-    public function request(int $value)
+    public static function request(int $value): self
     {
         return new self($value, false);
     }
 
-    public function response(int $value)
+    public static function response(int $value): self
     {
         return new self($value, true);
     }
@@ -24,6 +23,11 @@ final class PingPacket
         $this->response = $response;
     }
 
+    /**
+     * Является ли данный пакет "понг" пакетом.
+     *
+     * @return bool
+     */
     public function isResponse(): bool
     {
         return $this->response;

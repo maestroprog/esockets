@@ -1,6 +1,6 @@
 <?php
 
-namespace Esockets\net;
+namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
 

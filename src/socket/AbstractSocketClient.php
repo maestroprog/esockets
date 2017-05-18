@@ -1,6 +1,6 @@
 <?php
 
-namespace Esockets\net;
+namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
@@ -22,40 +22,24 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
     /** Интервал времени ожидания между попытками при чтении/записи. */
     const SOCKET_WAIT = 1;
 
-    /** Константы внутренних ошибок. */
-    const ERROR_NOTHING = 0;    // нет ошибки
-    const ERROR_AGAIN = 1;      // ошибка, просьба повторить операцию
-    const ERROR_SKIP = 2;       // ошибка, просьба пропустить операцию
-    const ERROR_FATAL = 4;      // фатальная ошибка
-    const ERROR_UNKNOWN = 8;    // неизвестная необрабатываемая ошибка
-
     /** Константы операций ввода/вывода. */
     const OP_READ = 0;
     const OP_WRITE = 1;
-
-    /**
-     * @var array Известные и обрабатываемые ошибки сокетов
-     */
-    protected static $catchableErrors = [];
-
-    /** Список известных ошибок для настройки обработчика */
-    const ERRORS_KNOW = [
-        'SOCKET_EWOULDBLOCK' => self::ERROR_NOTHING,
-        'SOCKET_EAGAIN' => self::ERROR_AGAIN,
-        'SOCKET_TRY_AGAIN' => self::ERROR_AGAIN,
-        'SOCKET_EPIPE' => self::ERROR_FATAL,
-        'SOCKET_ENOTCONN' => self::ERROR_FATAL,
-        'SOCKET_ECONNABORTED' => self::ERROR_FATAL,
-        'SOCKET_ECONNRESET' => self::ERROR_FATAL,
-    ];
 
     private $eventDisconnect;
     private $eventRead;
     private $eventPong;
 
-    public function __construct()
+    protected $errorHandler;
+
+    public function __construct(int $socketDomain, SocketErrorHandler $errorHandler)
     {
-        $this->checkConstants();
+        $this->errorHandler = $errorHandler;
+        if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
+            $this->errorHandler->handleError();
+        } else {
+            $this->errorHandler->setSocket($this->socket);
+        }
     }
 
     protected function isUnixAddress(): bool
@@ -198,51 +182,5 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
     public function unblock()
     {
         socket_set_nonblock($this->socket);
-    }
-
-
-    /**
-     * Функция проверяет, установлены ли некоторые константы обрабатываемых ошибок сокетов.
-     */
-    protected function checkConstants()
-    {
-        if (!empty(self::$catchableErrors)) return;
-        foreach (self::ERRORS_KNOW as $const => $selfType) {
-            if (defined($const)) {
-                self::$catchableErrors[constant($const)] = $selfType;
-            }
-        }
-    }
-
-    /**
-     * Функция возвращает одну из констант self::ERROR_*
-     * Параметр $errno - номер ошибки функции socket_last_error()
-     * Параметр $operation - номер операции; 1 = запись, 0 = чтение.
-     *
-     * @param int $errno
-     * @param int $operation
-     * @return int
-     */
-    protected function getErrorType(int $errno, int $operation): int
-    {
-        if ($errno === 0) {
-            return self::ERROR_NOTHING;
-        } elseif (isset(self::$catchableErrors[$errno])) {
-            if (
-                self::$catchableErrors[$errno] !== self::ERROR_NOTHING
-                && self::$catchableErrors[$errno] !== self::ERROR_AGAIN // for unix-like systems
-            ) {
-                Log::log(sprintf(
-                    'Socket catch error %s at %s: %d',
-                    socket_strerror($errno),
-                    $operation ? 'WRITING' : 'READING',
-                    $errno
-                ));
-            }
-            return self::$catchableErrors[$errno];
-        } else {
-            Log::log(sprintf('Unknown socket error %d: %s', $errno, socket_strerror($errno)));
-            return self::ERROR_UNKNOWN;
-        }
     }
 }

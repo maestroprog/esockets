@@ -1,6 +1,6 @@
 <?php
 
-namespace Esockets\net;
+namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
 use Esockets\base\exception\ConnectionException;
@@ -16,14 +16,6 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
      */
     protected $connected = false;
     protected $eventDisconnect;
-
-    public function __construct(int $socketDomain)
-    {
-        parent::__construct();
-        if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
-            $this->handleError();
-        }
-    }
 
     public function connect(AbstractAddress $serverAddress)
     {
@@ -42,34 +34,9 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
             throw new \LogicException('Unknown socket address.');
         }
         if (!$this->connected) {
-            $this->handleError();
+            $this->errorHandler->handleError();
         }
     }
-
-    protected function handleError()
-    {
-        if (is_resource($this->socket)) {
-            $error = socket_last_error($this->socket);
-        } else {
-            $error = socket_last_error();
-        }
-        $errorMessage = socket_strerror($error);
-        switch ($error) {
-            case SOCKET_ECONNREFUSED:
-                // если отсутствует файл сокета,
-            case SOCKET_ENOENT:
-                // либо соединиться со слушающим сокетом не удалось
-                throw new ConnectionException($errorMessage, ConnectionException::ERROR_FAIL_CONNECT);
-                break;
-            default:
-                // в иных случаях кидаем исключение
-                throw new ConnectionException(
-                    'Unknown connection error: ' . $errorMessage,
-                    ConnectionException::ERROR_UNKNOWN
-                );
-        }
-    }
-
     public function read(int $length, $force)
     {
         $buffer = '';
@@ -77,7 +44,7 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
         do {
             $data = socket_read($this->socket, $length);
             if ($data === false || $data === '') {
-                switch ($this->getErrorType(socket_last_error($this->socket), self::OP_READ)) {
+                switch ($this->errorHandler->getErrorType(socket_last_error($this->socket), self::OP_READ)) {
                     case self::ERROR_NOTHING:
                         if (PHP_OS !== 'WINNT') {
                             $this->disconnect();
@@ -138,8 +105,8 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
              */
             if ($wrote === false) {
 
-                switch ($this->getErrorType(socket_last_error($this->socket), self::OP_WRITE)) {
-                    case self::ERROR_NOTHING:
+                switch ($this->(socket_last_error($this->socket), self::OP_WRITE)) {
+                    case SocketErrorHandler::ERROR_NOTHING:
                         var_dump($wrote);
                         throw new \Exception(
                             'Socket write no error: '
@@ -147,18 +114,18 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
                             socket_last_error($this->socket)
                         );
                         break;
-                    case self::ERROR_AGAIN:
+                    case SocketErrorHandler::ERROR_AGAIN:
                         usleep(self::SOCKET_WAIT);
                         continue 2;
                         break;
-                    case self::ERROR_SKIP:
+                    case SocketErrorHandler::ERROR_SKIP:
                         return false;
 
-                    case self::ERROR_FATAL:
+                    case SocketErrorHandler::ERROR_FATAL:
                         $this->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
                         return false;
 
-                    case self::ERROR_UNKNOWN:
+                    case SocketErrorHandler::ERROR_UNKNOWN:
                         throw new \Exception(
                             'Socket write error: '
                             . socket_strerror(socket_last_error($this->socket)),

@@ -1,6 +1,6 @@
 <?php
 
-namespace Esockets\net;
+namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractServer;
@@ -10,6 +10,8 @@ final class TcpServer extends AbstractServer
 {
     protected $socket;
     protected $connected = false;
+
+    protected $errorHandler;
 
     /**
      * @var Peer[]
@@ -55,10 +57,13 @@ final class TcpServer extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function __construct(int $socketDomain)
+    public function __construct(int $socketDomain, SocketErrorHandler $errorHandler)
     {
+        $this->errorHandler = $errorHandler;
         if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
             throw new ConnectionException(socket_strerror(socket_last_error()));
+        } else {
+            $this->errorHandler->setSocket($this->socket);
         }
 
         socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
@@ -83,7 +88,7 @@ final class TcpServer extends AbstractServer
         }
 
         if (!$this->connected) {
-            $this->handleError();
+            $this->errorHandler->handleError();
         }
 
         if (socket_bind($this->socket, $listenAddress->getIp(), $listenAddress->getPort())) {

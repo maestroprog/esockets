@@ -1,13 +1,13 @@
 <?php
 
-namespace Esockets\net;
+namespace Esockets\socket;
 
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractServer;
 use Esockets\base\AbstractConnectionFactory;
 use Esockets\base\exception\ConnectionFactoryException;
 
-final class NetFactory extends AbstractConnectionFactory
+final class SocketFactory extends AbstractConnectionFactory
 {
     const SOCKET_DOMAIN = 'socket_domain';
     const SOCKET_PROTOCOL = 'socket_protocol';
@@ -71,7 +71,7 @@ final class NetFactory extends AbstractConnectionFactory
         if ($this->socket_protocol === SOL_TCP) {
             $client = new TcpClient($this->socket_domain);
         } elseif ($this->socket_protocol === SOL_UDP) {
-            $client = new UdpClient();
+            $client = new UdpClient($this->socket_domain);
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');
         }
@@ -83,7 +83,7 @@ final class NetFactory extends AbstractConnectionFactory
         if ($this->socket_protocol === SOL_TCP) {
             $client = new TcpServer($this->socket_domain);
         } elseif ($this->socket_protocol === SOL_UDP) {
-            $client = new UdpServer();
+            $client = new UdpServer($this->socket_domain);
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');
         }

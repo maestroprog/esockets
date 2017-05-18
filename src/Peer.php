@@ -4,7 +4,7 @@ namespace Esockets;
 
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractServer;
-use Esockets\net\Net;
+use Esockets\socket\Net;
 
 class Peer extends Client
 {

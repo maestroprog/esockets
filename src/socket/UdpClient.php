@@ -1,9 +1,9 @@
 <?php
 
-namespace Esockets\net;
+namespace Esockets\socket;
 
 use Esockets\base\AbstractClient;
-use Esockets\net\Net;
+use Esockets\socket\Net;
 
 class UdpClient extends AbstractClient
 {

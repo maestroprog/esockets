@@ -4,7 +4,7 @@ namespace Esockets\base;
 
 use Esockets\base\exception\ConfiguratorException;
 use Esockets\base\exception\ConnectionFactoryException;
-use Esockets\net\NetFactory;
+use Esockets\socket\SocketFactory;
 
 final class Configurator
 {
@@ -64,7 +64,7 @@ final class Configurator
 
     private function initSocket(array $config)
     {
-        $this->connectionFactory = new NetFactory($config);
+        $this->connectionFactory = new SocketFactory($config);
         $this->connectionType = self::CONNECTION_TYPE_SOCKET;
     }
 

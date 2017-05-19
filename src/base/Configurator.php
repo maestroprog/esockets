@@ -4,6 +4,8 @@ namespace Esockets\base;
 
 use Esockets\base\exception\ConfiguratorException;
 use Esockets\base\exception\ConnectionFactoryException;
+use Esockets\Client;
+use Esockets\Server;
 use Esockets\socket\SocketFactory;
 
 final class Configurator
@@ -18,6 +20,9 @@ final class Configurator
     const CONNECTION_LAYERS = 8;
 
     private $connectionType;
+    /**
+     * @var AbstractConnectionFactory
+     */
     private $connectionFactory;
     private $protocolClass;
     private $address;
@@ -46,10 +51,7 @@ final class Configurator
             }
         }
         if (isset($config[self::PROTOCOL_CLASS])) {
-            $protocolClass = $config[self::PROTOCOL_CLASS];
-            if (!is_subclass_of($protocolClass, AbstractProtocol::class)) {
-                throw new ConfiguratorException('Unknown protocol class: ' . $protocolClass . '.');
-            }
+            $this->useProtocol($config[self::PROTOCOL_CLASS]);
         }
         $connectionLayers = $config[self::CONNECTION_LAYERS] ?? [];
         if (!is_array($connectionLayers)) {
@@ -59,6 +61,7 @@ final class Configurator
             if (!is_array($layerConfig)) {
                 throw new ConfiguratorException('Wrong connection layer config: ' . $rowId . '.');
             }
+            $this->addConnectionLayer($layerConfig);
         }
     }
 
@@ -70,7 +73,8 @@ final class Configurator
 
     private function initCustom(array $config)
     {
-        $this->connectionFactory =
+        throw new \LogicException('It\'s not working');
+        //$this->connectionFactory =
         if (!class_exists($clientClass)) {
             throw new ConfiguratorException('The connection class "' . $clientClass . '" is not exists.');
         }
@@ -85,13 +89,21 @@ final class Configurator
 
     public function useProtocol(string $protocolClass)
     {
+        if (!is_subclass_of($protocolClass, AbstractProtocol::class)) {
+            throw new ConfiguratorException('Unknown protocol class: ' . $protocolClass . '.');
+        }
         if (!class_exists($protocolClass)) {
             throw new ConfiguratorException('The protocol class "' . $protocolClass . '" is not exists.');
         }
-        if (!is_subclass_of($protocolClass, AbstractProtocol::class)) {
+        /*if (!is_subclass_of($protocolClass, AbstractProtocol::class)) {
             throw new ConfiguratorException('The class "' . $protocolClass . '" is not a protocol class.');
-        }
+        }*/
         $this->protocolClass = $protocolClass;
+    }
+
+    private function addConnectionLayer(array $layerConfig)
+    {
+        $this->connectionLayers[] = [$connectionClass, $protocolClass];
     }
 
     public function connectToAddress(AbstractAddress $address): self
@@ -102,12 +114,18 @@ final class Configurator
 
     public function makeClient(): AbstractClient
     {
-
+        return new Client(
+            $this->connectionFactory->makeClient(),
+            new $this->protocolClass()
+        );
     }
 
     public function makeServer(): AbstractServer
     {
-
+        return new Server(
+            $this->connectionFactory->makeServer(),
+            new $this->protocolClass()
+        );
     }
 
     /*
@@ -125,10 +143,5 @@ final class Configurator
             throw new ConfiguratorException('Connection address is not configured.');
         }
         return $this->address;
-    }
-
-    private function addConnectionLayer()
-    {
-        $this->connectionLayers[] = [$connectionClass, $protocolClass];
     }
 }

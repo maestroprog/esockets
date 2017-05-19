@@ -9,5 +9,6 @@ return [
         SocketFactory::SOCKET_DOMAIN => AF_INET,
         SocketFactory::SOCKET_PROTOCOL => SOL_TCP,
     ],
+    Configurator::CONNECTION_LAYERS => [],
     Configurator::PROTOCOL_CLASS => \Esockets\protocol\Easy::class,
 ];

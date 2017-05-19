@@ -6,6 +6,7 @@ use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractProtocol;
 use Esockets\base\ConnectionWrapperInterface;
+use Esockets\base\ConnectorInterface;
 use Esockets\base\PingPacket;
 use Esockets\base\PingSupportInterface;
 
@@ -23,9 +24,9 @@ class Client extends AbstractClient implements ConnectionWrapperInterface
 
     private $times = [];
 
-    public function __construct(AbstractClient $client, AbstractProtocol $protocol)
+    public function __construct(ConnectorInterface $connection)
     {
-        $this->connection = $client;
+        $this->connection = $connection;
         $this->protocol = $protocol;
     }
 

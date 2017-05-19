@@ -37,6 +37,7 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
             $this->errorHandler->handleError();
         }
     }
+
     public function read(int $length, $force)
     {
         $buffer = '';
@@ -45,13 +46,13 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
             $data = socket_read($this->socket, $length);
             if ($data === false || $data === '') {
                 switch ($this->errorHandler->getErrorType(socket_last_error($this->socket), self::OP_READ)) {
-                    case self::ERROR_NOTHING:
+                    case SocketErrorHandler::ERROR_NOTHING:
                         if (PHP_OS !== 'WINNT') {
                             $this->disconnect();
                         }
                         return false;
                         break;
-                    case self::ERROR_AGAIN:
+                    case SocketErrorHandler::ERROR_AGAIN:
                         if ($data === false) {
                             // todo это вроде как только для unix систем
                             return false;
@@ -64,14 +65,14 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
                         }
                         continue 2;
                         break;
-                    case self::ERROR_SKIP:
+                    case SocketErrorHandler::ERROR_SKIP:
                         return false;
 
-                    case self::ERROR_FATAL:
+                    case SocketErrorHandler::ERROR_FATAL:
                         $this->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
                         return false;
 
-                    case self::ERROR_UNKNOWN:
+                    case SocketErrorHandler::ERROR_UNKNOWN:
                         throw new \Exception(
                             'Socket read error: '
                             . socket_strerror(socket_last_error($this->socket)),
@@ -105,8 +106,9 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
              */
             if ($wrote === false) {
 
-                switch ($this->(socket_last_error($this->socket), self::OP_WRITE)) {
-                    case SocketErrorHandler::ERROR_NOTHING:
+                switch ($this->errorHandler->getErrorType(socket_last_error($this->socket), self::OP_WRITE)) {
+                case
+                    SocketErrorHandler::ERROR_NOTHING:
                         var_dump($wrote);
                         throw new \Exception(
                             'Socket write no error: '

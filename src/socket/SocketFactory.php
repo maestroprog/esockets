@@ -69,9 +69,9 @@ final class SocketFactory extends AbstractConnectionFactory
     public function makeClient(): AbstractClient
     {
         if ($this->socket_protocol === SOL_TCP) {
-            $client = new TcpClient($this->socket_domain);
+            $client = TcpClient::createEmpty($this->socket_domain, new SocketErrorHandler());
         } elseif ($this->socket_protocol === SOL_UDP) {
-            $client = new UdpClient($this->socket_domain);
+            $client = UdpClient::createEmpty($this->socket_domain, new SocketErrorHandler());
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');
         }
@@ -81,9 +81,9 @@ final class SocketFactory extends AbstractConnectionFactory
     public function makeServer(): AbstractServer
     {
         if ($this->socket_protocol === SOL_TCP) {
-            $client = new TcpServer($this->socket_domain);
+            $client = new TcpServer($this->socket_domain, new SocketErrorHandler());
         } elseif ($this->socket_protocol === SOL_UDP) {
-            $client = new UdpServer($this->socket_domain);
+            $client = new UdpServer($this->socket_domain, new SocketErrorHandler());
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');
         }

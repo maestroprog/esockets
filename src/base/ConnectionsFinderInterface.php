@@ -12,10 +12,10 @@ interface ConnectionsFinderInterface
     public function find();
 
     /**
-     * @param resource $socket
+     * @param mixed $connection
      * @return void
      */
-    public function accept(resource $socket);
+    public function accept($connection);
 
     /**
      * todo doc

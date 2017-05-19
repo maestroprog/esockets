@@ -5,6 +5,7 @@ namespace Esockets\socket;
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\BlockingInterface;
+use Esockets\base\exception\ConnectionException;
 use Esockets\base\PingPacket;
 
 class AbstractSocketClient extends AbstractClient implements BlockingInterface
@@ -32,13 +33,48 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
 
     protected $errorHandler;
 
-    public function __construct(int $socketDomain, SocketErrorHandler $errorHandler)
+    /**
+     * @param int $socketDomain
+     * @param SocketErrorHandler $errorHandler
+     * @return AbstractSocketClient
+     */
+    public static function createEmpty(int $socketDomain, SocketErrorHandler $errorHandler): self
     {
+        return new self($socketDomain, $errorHandler);
+    }
+
+    /**
+     * @param int $socketDomain
+     * @param SocketErrorHandler $errorHandler
+     * @param resource $socket
+     * @return AbstractSocketClient
+     * @throws ConnectionException
+     */
+    public static function createConnected(
+        int $socketDomain,
+        SocketErrorHandler $errorHandler,
+        resource $socket = null
+    ): self
+    {
+        if (get_resource_type($socket) !== 'socket') {
+            throw new ConnectionException('Unknown resource type: ' . get_resource_type($socket));
+        }
+        return new self($socketDomain, $errorHandler, $socket);
+    }
+
+    final private function __construct(int $socketDomain, SocketErrorHandler $errorHandler, resource $socket = null)
+    {
+        $this->socketDomain = $socketDomain;
         $this->errorHandler = $errorHandler;
-        if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
-            $this->errorHandler->handleError();
+        if (is_null($socket)) {
+            if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
+                $this->errorHandler->handleError();
+            } else {
+                $this->errorHandler->setSocket($this->socket);
+            }
         } else {
-            $this->errorHandler->setSocket($this->socket);
+            $this->socket = $socket;
+            $this->errorHandler->setSocket($socket);
         }
     }
 
@@ -111,15 +147,6 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
         // TODO: Implement live() method.
     }
 
-    /**
-     * @param AbstractAddress $address
-     * @return void
-     */
-    public function connect(AbstractAddress $address)
-    {
-        // TODO: Implement connect() method.
-    }
-
     public function onConnect(callable $callback)
     {
         // TODO: Implement onConnect() method.
@@ -182,5 +209,15 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
     public function unblock()
     {
         socket_set_nonblock($this->socket);
+    }
+
+    final private function __clone()
+    {
+        ;
+    }
+
+    final private function __sleep()
+    {
+        ;
     }
 }

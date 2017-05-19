@@ -5,7 +5,7 @@ namespace Esockets\socket;
 use Esockets\base\AbstractClient;
 use Esockets\socket\Net;
 
-class UdpClient extends AbstractClient
+class UdpClient extends AbstractSocketClient
 {
     protected function _connect()
     {

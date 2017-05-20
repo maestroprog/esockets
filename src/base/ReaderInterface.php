@@ -28,7 +28,7 @@ interface ReaderInterface
      * Assigns handler for received data.
      *
      * @param callable $callback
-     * @return void
+     * @return CallbackEvent
      */
-    public function onReceive(callable $callback);
+    public function onReceive(callable $callback): CallbackEvent;
 }

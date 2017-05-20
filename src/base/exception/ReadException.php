@@ -13,5 +13,6 @@ final class ReadException extends \Exception
      */
     public function __construct($read)
     {
+        parent::__construct($read);
     }
 }

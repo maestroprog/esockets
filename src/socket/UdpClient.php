@@ -2,45 +2,74 @@
 
 namespace Esockets\socket;
 
-use Esockets\base\AbstractClient;
-use Esockets\socket\Net;
+use Esockets\base\AbstractAddress;
+use Esockets\base\exception\ReadException;
+use Esockets\base\exception\SendException;
 
-class UdpClient extends AbstractSocketClient
+final class UdpClient extends AbstractSocketClient
 {
-    protected function _connect()
+    public function connect(AbstractAddress $serverAddress)
     {
-        if ($this->socketDomain === AF_UNIX) {
-            throw new \Exception('Socket domain cannot be as AF_UNIX');
+        if ($this->connected) {
+            throw new \LogicException('Socket is already connected.');
         }
-        $protocol = $this->socketDomain > 1 ? getprotobyname('udp') : 0;
-        if ($this->connection = socket_create($this->socketDomain, SOCK_DGRAM, $protocol)) {
 
-            $this->setNonBlock(); // устанавливаем неблокирующий режим работы сокета
+        $this->serverAddress = $serverAddress;
 
-            parent::connect();
-            return $this->connected = true;
+        try {
+            if ($this->send(1)) {
+                $this->connected = true;
+            }
+        } catch (SendException $e) {
+            ;
         }
-        return false;
+
+        if (!$this->connected) {
+            $this->errorHandler->handleError();
+        } else {
+            $this->eventConnect->callEvents();
+        }
     }
 
-    public function read(int $length, bool $need = false)
+    public function read(int $length, bool $force)
     {
         $buffer = null;
-        $ip = null;
-        $port = 0;
-        if ($bytes = socket_recvfrom($this->socket, $buffer, $length, 0, $ip, $port)) {
-            return [$ip, $port, $buffer];
-        } elseif ($bytes === 0) {
-            Log::log('0 bytes read');
+        /*$ip = null;
+        $port = 0;*/
+        if ($this->isUnixAddress()) {
+            $addr = $this->serverAddress->getSockPath();
+            $port = 0;
         } else {
-            Log::log('reading fail with error ' . socket_last_error($this->socket));
+            $addr = $this->serverAddress->getIp();
+            $port = $this->serverAddress->getPort();
         }
-        return false;
+        $bytes = socket_recvfrom($this->socket, $buffer, $length, 0, $addr, $port);
+        if ($bytes === false) {
+            throw new ReadException('Fail while reading data from udp socket.', ReadException::ERROR_FAIL);
+        } elseif ($bytes === 0) {
+            throw new ReadException('0 bytes read from udp socket.', ReadException::ERROR_EMPTY);
+        }
+
+        return $buffer;
     }
 
-    public function send(string &$data)
+    public function send($data): bool
     {
-        list($addr, $port) = $this->connection->getPeerAddress();
-        socket_sendto($this->socket, $data, strlen($data), 0, $addr, $port);
+        if ($this->isUnixAddress()) {
+            $addr = $this->serverAddress->getSockPath();
+            $port = 0;
+        } else {
+            $addr = $this->serverAddress->getIp();
+            $port = $this->serverAddress->getPort();
+        }
+        $wrote = socket_sendto($this->socket, $data, strlen($data), 0, $addr, $port);
+        if ($wrote === false) {
+            return false;
+        } elseif ($wrote === 0) {
+            throw new SendException('Not sended!');
+        }
+        $this->transmittedBytes += $wrote;
+        $this->transmittedPackets++;
+        return true;
     }
 }

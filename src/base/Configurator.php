@@ -17,17 +17,15 @@ final class Configurator
     const FACTORY_CLASS = 2;
     const PROTOCOL_CLASS = 3;
     const ADDRESS = 4;
-    const CONNECTION_LAYERS = 8;
 
     private $connectionType;
+
     /**
      * @var AbstractConnectionFactory
      */
     private $connectionFactory;
     private $protocolClass;
     private $address;
-
-    private $connectionLayers = [];
 
     /**
      * @param array $config
@@ -52,16 +50,6 @@ final class Configurator
         }
         if (isset($config[self::PROTOCOL_CLASS])) {
             $this->useProtocol($config[self::PROTOCOL_CLASS]);
-        }
-        $connectionLayers = $config[self::CONNECTION_LAYERS] ?? [];
-        if (!is_array($connectionLayers)) {
-            throw new ConfiguratorException('Unknown CONNECTION_LAYERS config variable.');
-        }
-        foreach ($connectionLayers as $rowId => $layerConfig) {
-            if (!is_array($layerConfig)) {
-                throw new ConfiguratorException('Wrong connection layer config: ' . $rowId . '.');
-            }
-            $this->addConnectionLayer($layerConfig);
         }
     }
 
@@ -101,11 +89,6 @@ final class Configurator
         $this->protocolClass = $protocolClass;
     }
 
-    private function addConnectionLayer(array $layerConfig)
-    {
-        $this->connectionLayers[] = [$connectionClass, $protocolClass];
-    }
-
     public function connectToAddress(AbstractAddress $address): self
     {
         $this->address = $address;
@@ -114,9 +97,10 @@ final class Configurator
 
     public function makeClient(): AbstractClient
     {
+        $client = $this->connectionFactory->makeClient();
         return new Client(
-            $this->connectionFactory->makeClient(),
-            new $this->protocolClass()
+            $client,
+            new $this->protocolClass($client)
         );
     }
 
@@ -124,7 +108,16 @@ final class Configurator
     {
         return new Server(
             $this->connectionFactory->makeServer(),
-            new $this->protocolClass()
+            $this
+        );
+    }
+
+    public function makePeer($connectionResource)
+    {
+        $peer = $this->connectionFactory->makePeer($connectionResource);
+        return new Client(
+            $peer,
+            new $this->protocolClass($peer)
         );
     }
 

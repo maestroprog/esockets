@@ -4,23 +4,7 @@ namespace Esockets\base;
 
 abstract class AbstractServer implements
     ConnectorInterface,
-    ConnectionsFinderInterface,
-    BroadcastingInterface,
-    BlockingInterface
+    ConnectionsFinderInterface
 {
-    /**
-     * Отключает всех пиров, оставляя входящее соединение открытым.
-     *
-     * @return void
-     */
-    abstract public function disconnectAll();
 
-    /**
-     * Назначает обработчик события отсоединения всех пиров.
-     * Обработчик вызывается при отсоединении последнего подключенного пира.
-     *
-     * @param callable $callback
-     * @return void
-     */
-    abstract public function onDisconnectAll(callable $callback);
 }

@@ -5,18 +5,21 @@ namespace Esockets;
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractProtocol;
+use Esockets\base\CallbackEvent;
 use Esockets\base\ConnectionWrapperInterface;
 use Esockets\base\ConnectorInterface;
 use Esockets\base\PingPacket;
 use Esockets\base\PingSupportInterface;
+use Esockets\base\ReaderInterface;
+use Esockets\base\SenderInterface;
 
-class Client extends AbstractClient implements ConnectionWrapperInterface
+class Client implements ConnectorInterface, ReaderInterface, SenderInterface
 {
     private $connection;
     private $protocol;
 
-    private $timeout;
-    private $reconnect;
+    private $timeout = 30;
+    private $reconnectInterval = 1;
 
     const TIME_LAST_PING = 'last_ping';
     const TIME_LAST_RECONNECT = 'last_reconnect';
@@ -24,7 +27,7 @@ class Client extends AbstractClient implements ConnectionWrapperInterface
 
     private $times = [];
 
-    public function __construct(ConnectorInterface $connection)
+    public function __construct(AbstractClient $connection, AbstractProtocol $protocol)
     {
         $this->connection = $connection;
         $this->protocol = $protocol;
@@ -35,9 +38,9 @@ class Client extends AbstractClient implements ConnectionWrapperInterface
         $this->timeout = $timeout;
     }
 
-    public function setReconnectInterval(int $reconnect)
+    public function setReconnectInterval(int $interval)
     {
-        $this->reconnect = $reconnect;
+        $this->reconnectInterval = $interval;
     }
 
     public function getServerAddress(): AbstractAddress
@@ -55,9 +58,9 @@ class Client extends AbstractClient implements ConnectionWrapperInterface
         $this->connection->connect($address);
     }
 
-    public function onConnect(callable $callback)
+    public function onConnect(callable $callback): CallbackEvent
     {
-        $this->connection->onConnect($callback);
+        return $this->connection->onConnect($callback);
     }
 
     public function reconnect(): bool
@@ -75,9 +78,29 @@ class Client extends AbstractClient implements ConnectionWrapperInterface
         $this->connection->disconnect();
     }
 
-    public function onDisconnect(callable $callback)
+    public function onDisconnect(callable $callback): CallbackEvent
     {
-        $this->connection->onDisconnect($callback);
+        return $this->connection->onDisconnect($callback);
+    }
+
+    public function read()
+    {
+        $this->protocol->read();
+    }
+
+    public function returnRead()
+    {
+        return $this->protocol->returnRead();
+    }
+
+    public function onReceive(callable $callback): CallbackEvent
+    {
+        return $this->protocol->onReceive($callback);
+    }
+
+    public function send($data): bool
+    {
+        return $this->protocol->send($data);
     }
 
     protected function ping()
@@ -100,26 +123,6 @@ class Client extends AbstractClient implements ConnectionWrapperInterface
             $this->protocol->send($pingRequest);
             throw new \LogicException('Protocol ' . get_class($this->protocol) . ' has no support ping.');
         }
-    }
-
-    public function read()
-    {
-        $this->protocol->read();
-    }
-
-    public function returnRead()
-    {
-        return $this->protocol->returnRead();
-    }
-
-    public function onReceive(callable $callback)
-    {
-        $this->protocol->onReceive($callback);
-    }
-
-    public function send($data): bool
-    {
-        return $this->protocol->send($data);
     }
 
     /**
@@ -147,8 +150,8 @@ class Client extends AbstractClient implements ConnectionWrapperInterface
                 // иногда пингуем соединение
                 $this->ping();
             }
-        } elseif ($this->reconnect >= 0 && $this->getTime() + $this->timeout > time()) {
-            if ($this->getTime(self::TIME_LAST_RECONNECT) + $this->reconnect <= time()) {
+        } elseif ($this->reconnectInterval >= 0 && $this->getTime() + $this->timeout > time()) {
+            if ($this->getTime(self::TIME_LAST_RECONNECT) + $this->reconnectInterval <= time()) {
                 if ($this->reconnect()) {
                     $this->setTime();
                 }

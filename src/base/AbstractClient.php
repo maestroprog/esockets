@@ -2,7 +2,7 @@
 
 namespace Esockets\base;
 
-abstract class AbstractClient implements ConnectorInterface
+abstract class AbstractClient implements ConnectorInterface, IoAwareInterface
 {
     /**
      * Вернет адрес сервера, к которому подключени клиент.
@@ -17,4 +17,11 @@ abstract class AbstractClient implements ConnectorInterface
      * @return AbstractAddress
      */
     abstract public function getClientAddress(): AbstractAddress;
+
+    /**
+     * Должен вернуть ресурс соединения.
+     *
+     * @return resource|mixed
+     */
+    abstract public function getConnectionResource();
 }

@@ -97,12 +97,14 @@ final class SocketErrorHandler
         }
         $errorMessage = socket_strerror($error);
         switch ($error) {
+            case SOCKET_EADDRINUSE:
+                // если адрес используется,
             case SOCKET_ECONNREFUSED:
                 // если отсутствует файл сокета,
             case SOCKET_ENOENT:
                 // либо соединиться со слушающим сокетом не удалось
                 throw new ConnectionException($errorMessage, ConnectionException::ERROR_FAIL_CONNECT);
-                break;
+            // break
             default:
                 // в иных случаях кидаем исключение
                 throw new ConnectionException(

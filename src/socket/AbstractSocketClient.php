@@ -5,19 +5,33 @@ namespace Esockets\socket;
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\BlockingInterface;
+use Esockets\base\CallbackEvent;
+use Esockets\base\CallbackEventsContainer;
 use Esockets\base\exception\ConnectionException;
 use Esockets\base\PingPacket;
 
-class AbstractSocketClient extends AbstractClient implements BlockingInterface
+abstract class AbstractSocketClient extends AbstractClient implements BlockingInterface
 {
-    /**
-     * @var int type of socket
-     */
+    use SocketTrait;
+
     protected $socketDomain;
     protected $socket;
-
+    protected $connected = false;
+    /**
+     * @var Ipv4Address|UnixAddress
+     */
     protected $serverAddress;
     protected $clientAddress;
+    protected $errorHandler;
+
+    protected $eventConnect;
+    protected $eventDisconnect;
+
+
+    protected $receivedBytes = 0;
+    protected $receivedPackets = 0;
+    protected $transmittedBytes = 0;
+    protected $transmittedPackets = 0;
 
 
     /** Интервал времени ожидания между попытками при чтении/записи. */
@@ -27,12 +41,6 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
     const OP_READ = 0;
     const OP_WRITE = 1;
 
-    private $eventDisconnect;
-    private $eventRead;
-    private $eventPong;
-
-    protected $errorHandler;
-
     /**
      * @param int $socketDomain
      * @param SocketErrorHandler $errorHandler
@@ -40,7 +48,7 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
      */
     public static function createEmpty(int $socketDomain, SocketErrorHandler $errorHandler): self
     {
-        return new self($socketDomain, $errorHandler);
+        return new static($socketDomain, $errorHandler);
     }
 
     /**
@@ -59,48 +67,46 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
         if (get_resource_type($socket) !== 'socket') {
             throw new ConnectionException('Unknown resource type: ' . get_resource_type($socket));
         }
-        return new self($socketDomain, $errorHandler, $socket);
+        return new static($socketDomain, $errorHandler, $socket);
     }
 
     final private function __construct(int $socketDomain, SocketErrorHandler $errorHandler, resource $socket = null)
     {
+        $this->eventConnect = new CallbackEventsContainer();
+        $this->eventDisconnect = new CallbackEventsContainer();
+
         $this->socketDomain = $socketDomain;
         $this->errorHandler = $errorHandler;
         if (is_null($socket)) {
-            if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
+            switch (get_class($this)) {
+                case TcpClient::class:
+                    $type = SOCK_STREAM;
+                    $protocol = SOL_TCP;
+                    break;
+                case UdpClient::class:
+                    $type = SOCK_DGRAM;
+                    $protocol = SOL_UDP;
+                    break;
+                default:
+                    throw new \LogicException('Other protocols not supported.');
+            }
+            if (!($this->socket = socket_create($socketDomain, $type, $protocol))) {
                 $this->errorHandler->handleError();
             } else {
                 $this->errorHandler->setSocket($this->socket);
             }
         } else {
             $this->socket = $socket;
-            $this->errorHandler->setSocket($socket);
+            $this->connected = true;
+            $this->errorHandler->setSocket($this->socket);
         }
     }
 
-    protected function isUnixAddress(): bool
-    {
-        return $this->socketDomain === AF_UNIX;
-    }
-
-    protected function isIpAddress(): bool
-    {
-        return $this->socketDomain === AF_INET || $this->socketDomain === AF_INET6;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function getServerAddress(): AbstractAddress
     {
         return $this->serverAddress;
     }
 
-    /**
-     * Вернет адрес клиента, который подключен к серверу.
-     *
-     * @return AbstractAddress
-     */
     public function getClientAddress(): AbstractAddress
     {
         if (is_null($this->clientAddress) || !($this->clientAddress instanceof AbstractAddress)) {
@@ -115,15 +121,80 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
         return $this->clientAddress;
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function getConnectionResource()
+    {
+        return $this->socket;
+    }
+
     public function reconnect(): bool
     {
         $this->disconnect();
         try {
             $this->connect($this->serverAddress);
-        } catch ($e) {
+        } catch (ConnectionException $e) {
             return false;
         }
         return true;
+    }
+
+    public function onConnect(callable $callback): CallbackEvent
+    {
+        return $this->eventConnect->addEvent(CallbackEvent::create($callback));
+    }
+
+    public function isConnected(): bool
+    {
+        return $this->connected;
+    }
+
+    public function disconnect()
+    {
+        if ($this->socket) {
+            $this->block(); // блокируем сокет перед завершением его работы
+            socket_shutdown($this->socket);
+            socket_close($this->socket);
+            $this->eventDisconnect->callEvents();
+        } else {
+            throw new \LogicException('Socket already is closed.');
+        }
+    }
+
+    public function onDisconnect(callable $callback): CallbackEvent
+    {
+        return $this->eventDisconnect->addEvent(CallbackEvent::create($callback));
+    }
+
+    public function block()
+    {
+        socket_set_block($this->socket);
+    }
+
+    public function unblock()
+    {
+        socket_set_nonblock($this->socket);
+    }
+
+    public function getReceivedBytesCount(): int
+    {
+        return $this->receivedBytes;
+    }
+
+    public function getReceivedPacketCount(): int
+    {
+        return $this->receivedPackets;
+    }
+
+    public function getTransmittedBytesCount(): int
+    {
+        return $this->transmittedBytes;
+    }
+
+    public function getTransmittedPacketCount(): int
+    {
+        return $this->transmittedPackets;
     }
 
     /**
@@ -141,75 +212,33 @@ class AbstractSocketClient extends AbstractClient implements BlockingInterface
      * }
      *
      * @return bool
+     *
+     * public function live()
+     * {
+     * // TODO: Implement live() method.
+     * }
      */
-    public function live()
-    {
-        // TODO: Implement live() method.
-    }
-
-    public function onConnect(callable $callback)
-    {
-        // TODO: Implement onConnect() method.
-    }
-
-    public function isConnected(): bool
-    {
-        // TODO: Implement isConnected() method.
-    }
-
-    public function disconnect()
-    {
-        if ($this->socket) {
-            $this->block(); // блокируем сокет перед завершением его работы
-            socket_shutdown($this->socket);
-            socket_close($this->socket);
-            $this->callDisconnectEvent();
-        } else {
-            throw new \LogicException('Socket already is closed.');
+    /*
+        public function ping()
+        {
+            $ping = PingPacket::request(rand(1000, 9999));
+            $this->eventPong = function (PingPacket $msg) use ($ping) {
+                if ($msg->getValue() !== $ping->getValue()) {
+                    throw new \Exception('Incorrect ping data');
+                } else {
+                    $this->setTime(self::LIVE_LAST_PING);
+                }
+                $this->eventPong;
+            };
+            $this->send($ping);
+            unset($ping);
         }
-    }
 
-    public function onDisconnect(callable $callback)
-    {
-        $this->eventDisconnect = $callback;
-    }
+        public function pong(PingPacket $pingData)
+        {
+            // TODO: Implement pong() method.
+        }*/
 
-    protected function callDisconnectEvent()
-    {
-        if (is_callable($this->eventDisconnect)) {
-            call_user_func($this->eventDisconnect);
-        }
-    }
-
-    public function ping()
-    {
-        $ping = PingPacket::request(rand(1000, 9999));
-        $this->eventPong = function (PingPacket $msg) use ($ping) {
-            if ($msg->getValue() !== $ping->getValue()) {
-                throw new \Exception('Incorrect ping data');
-            } else {
-                $this->setTime(self::LIVE_LAST_PING);
-            }
-            $this->eventPong;
-        };
-        $this->send($ping);
-        unset($ping);
-    }
-
-    public function pong(PingPacket $pingData)
-    {
-        // TODO: Implement pong() method.
-    }
-
-    public function block()
-    {
-        socket_set_block($this->socket);
-    }
-
-    public function unblock()
-    {
-        socket_set_nonblock($this->socket);
-    }
 
     final private function __clone()
     {

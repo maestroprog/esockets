@@ -10,7 +10,7 @@ interface ConnectorInterface
      */
     public function connect(AbstractAddress $address);
 
-    public function onConnect(callable $callback);
+    public function onConnect(callable $callback): CallbackEvent;
 
     public function reconnect(): bool;
 
@@ -18,5 +18,5 @@ interface ConnectorInterface
 
     public function disconnect();
 
-    public function onDisconnect(callable $callback);
+    public function onDisconnect(callable $callback): CallbackEvent;
 }

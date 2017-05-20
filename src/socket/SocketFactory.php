@@ -89,4 +89,16 @@ final class SocketFactory extends AbstractConnectionFactory
         }
         return $client;
     }
+
+    public function makePeer($connectionResource): AbstractClient
+    {
+        if ($this->socket_protocol === SOL_TCP) {
+            $peer = TcpClient::createConnected($this->socket_domain, new SocketErrorHandler(), $connectionResource);
+        } elseif ($this->socket_protocol === SOL_UDP) {
+            $peer = UdpClient::createConnected($this->socket_domain, new SocketErrorHandler(), $connectionResource);
+        } else {
+            throw new \LogicException('An attempt to use an unknown protocol.');
+        }
+        return $peer;
+    }
 }

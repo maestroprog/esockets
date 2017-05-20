@@ -2,8 +2,11 @@
 
 namespace Esockets\protocol;
 
+use Esockets\base\CallbackEvent;
+use Esockets\base\CallbackEventsContainer;
 use Esockets\base\exception\ReadException;
 use Esockets\base\exception\SendException;
+use Esockets\base\IoAwareInterface;
 use Esockets\base\PingSupportInterface;
 use Esockets\base\PingPacket;
 use Esockets\base\AbstractProtocol;
@@ -26,6 +29,17 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
 
     private $eventReceive;
     private $eventPong;
+
+    /**
+     * @inheritDoc
+     */
+    public function __construct(IoAwareInterface $provider)
+    {
+        parent::__construct($provider);
+
+        $this->eventReceive = new CallbackEventsContainer();
+    }
+
 
     public function read()
     {
@@ -67,9 +81,9 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
     /**
      * @inheritDoc
      */
-    public function onReceive(callable $callback)
+    public function onReceive(callable $callback): CallbackEvent
     {
-        $this->eventReceive = $callback;
+        return $this->eventReceive->addEvent(CallbackEvent::create($callback));
     }
 
     /**

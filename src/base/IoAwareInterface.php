@@ -20,7 +20,7 @@ interface IoAwareInterface
      *
      * @throws ReadException If can not read the data
      */
-    public function read(int $length, $force);
+    public function read(int $length, bool $force);
 
     public function getReceivedBytesCount(): int;
 

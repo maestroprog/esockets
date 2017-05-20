@@ -3,25 +3,16 @@
 namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
-use Esockets\base\exception\ConnectionException;
-use Esockets\base\exception\ReadException;
-use Esockets\base\IoAwareInterface;
-use Esockets\base\PingPacket;
-use Esockets\debug\Log;
 
-final class TcpClient extends AbstractSocketClient implements IoAwareInterface
+final class TcpClient extends AbstractSocketClient
 {
-    /**
-     * @var bool connection state
-     */
-    protected $connected = false;
-    protected $eventDisconnect;
-
     public function connect(AbstractAddress $serverAddress)
     {
         if ($this->connected) {
             throw new \LogicException('Socket is already connected.');
         }
+
+        $this->serverAddress = $serverAddress;
         if ($this->isIpAddress() && $serverAddress instanceof Ipv4Address) {
             if (socket_connect($this->socket, $serverAddress->getIp(), $serverAddress->getPort())) {
                 $this->connected = true;
@@ -33,12 +24,15 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
         } else {
             throw new \LogicException('Unknown socket address.');
         }
+
         if (!$this->connected) {
             $this->errorHandler->handleError();
+        } else {
+            $this->eventConnect->callEvents();
         }
     }
 
-    public function read(int $length, $force)
+    public function read(int $length, bool $force)
     {
         $buffer = '';
         $try = 0;
@@ -81,8 +75,11 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
                         break;
                 }
             } else {
+                $dataLength = strlen($data);
+                $this->receivedBytes += $dataLength;
+                $this->receivedPackets++;
                 $buffer .= $data;
-                $length -= strlen($data);
+                $length -= $dataLength;
                 $try = 0; // обнуляем счетчик попыток чтения
                 if ($length > 0) {
                     usleep(self::SOCKET_WAIT);
@@ -107,7 +104,7 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
             if ($wrote === false) {
 
                 switch ($this->errorHandler->getErrorType(socket_last_error($this->socket), self::OP_WRITE)) {
-                case
+                    case
                     SocketErrorHandler::ERROR_NOTHING:
                         var_dump($wrote);
                         throw new \Exception(
@@ -142,28 +139,10 @@ final class TcpClient extends AbstractSocketClient implements IoAwareInterface
             } else {
                 $data = substr($data, $wrote);
                 $written += $wrote;
+                $this->transmittedBytes += $wrote;
+                $this->transmittedPackets++;
             }
         } while ($written < $length);
         return true;
-    }
-
-    public function getReceivedBytesCount(): int
-    {
-        // TODO: Implement getReceivedBytesCount() method.
-    }
-
-    public function getReceivedPacketCount(): int
-    {
-        // TODO: Implement getReceivedPacketCount() method.
-    }
-
-    public function getTransmittedBytesCount(): int
-    {
-        // TODO: Implement getTransmittedBytesCount() method.
-    }
-
-    public function getTransmittedPacketCount(): int
-    {
-        // TODO: Implement getTransmittedPacketCount() method.
     }
 }

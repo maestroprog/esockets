@@ -12,24 +12,15 @@ interface ConnectionsFinderInterface
     public function find();
 
     /**
-     * @param mixed $connection
-     * @return void
-     */
-    public function accept($connection);
-
-    /**
      * todo doc
      *
      * @param callable $callback
-     * @return void
+     * @return CallbackEvent
      *
      * @example
      * $connectionFinder->onFound(function(resource $socket){
      *      return true; // every socket accept
      * });
      */
-    public function onFound(callable $callback);
-
-
-    public function onAccept(callable $callback);
+    public function onFound(callable $callback): CallbackEvent;
 }

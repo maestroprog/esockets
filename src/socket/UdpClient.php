@@ -37,13 +37,13 @@ final class UdpClient extends AbstractSocketClient
         /*$ip = null;
         $port = 0;*/
         if ($this->isUnixAddress()) {
-            $addr = $this->serverAddress->getSockPath();
+            $address = $this->serverAddress->getSockPath();
             $port = 0;
         } else {
-            $addr = $this->serverAddress->getIp();
+            $address = $this->serverAddress->getIp();
             $port = $this->serverAddress->getPort();
         }
-        $bytes = socket_recvfrom($this->socket, $buffer, $length, 0, $addr, $port);
+        $bytes = socket_recvfrom($this->socket, $buffer, $length, 0, $address, $port);
         if ($bytes === false) {
             throw new ReadException('Fail while reading data from udp socket.', ReadException::ERROR_FAIL);
         } elseif ($bytes === 0) {
@@ -56,17 +56,17 @@ final class UdpClient extends AbstractSocketClient
     public function send($data): bool
     {
         if ($this->isUnixAddress()) {
-            $addr = $this->serverAddress->getSockPath();
+            $address = $this->serverAddress->getSockPath();
             $port = 0;
         } else {
-            $addr = $this->serverAddress->getIp();
+            $address = $this->serverAddress->getIp();
             $port = $this->serverAddress->getPort();
         }
-        $wrote = socket_sendto($this->socket, $data, strlen($data), 0, $addr, $port);
+        $wrote = socket_sendto($this->socket, $data, strlen($data), 0, $address, $port);
         if ($wrote === false) {
             return false;
         } elseif ($wrote === 0) {
-            throw new SendException('Not sended!');
+            throw new SendException('Not transmitted!');
         }
         $this->transmittedBytes += $wrote;
         $this->transmittedPackets++;

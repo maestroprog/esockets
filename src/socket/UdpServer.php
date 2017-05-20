@@ -124,18 +124,18 @@ final class UdpServer extends AbstractServer implements BlockingInterface
 
     public function find()
     {
-        $addr = null;
+        $address = null;
         $port = 0;
-        $bytes = socket_recvfrom($this->socket, $buffer, 1, 0, $addr, $port);
+        $bytes = socket_recvfrom($this->socket, $buffer, 1, 0, $address, $port);
         if ($bytes === false) {
             throw new ReadException('Fail while reading data from udp socket.', ReadException::ERROR_FAIL);
         } elseif ($bytes === 0) {
             throw new ReadException('0 bytes read from udp socket.', ReadException::ERROR_EMPTY);
         }
         if ($this->isIpAddress()) {
-            $clientAddress = new Ipv4Address($addr, $port);
+            $clientAddress = new Ipv4Address($address, $port);
         } else {
-            $clientAddress = new UnixAddress($addr);
+            $clientAddress = new UnixAddress($address);
         }
         $this->eventFound->callEvents($clientAddress);
     }

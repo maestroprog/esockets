@@ -59,6 +59,11 @@ final class Configurator
         $this->connectionType = self::CONNECTION_TYPE_SOCKET;
     }
 
+    /**
+     * @param array $config
+     * @throws ConfiguratorException
+     * @todo пока не работоспособно!
+     */
     private function initCustom(array $config)
     {
         throw new \LogicException('It\'s not working');
@@ -95,7 +100,7 @@ final class Configurator
         return $this;
     }
 
-    public function makeClient(): AbstractClient
+    public function makeClient(): Client
     {
         $client = $this->connectionFactory->makeClient();
         return new Client(
@@ -104,7 +109,7 @@ final class Configurator
         );
     }
 
-    public function makeServer(): AbstractServer
+    public function makeServer(): Server
     {
         return new Server(
             $this->connectionFactory->makeServer(),

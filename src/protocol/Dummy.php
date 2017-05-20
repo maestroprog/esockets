@@ -4,7 +4,6 @@ namespace Esockets\protocol;
 
 use Esockets\base\AbstractProtocol;
 use Esockets\base\CallbackEvent;
-use Esockets\base\exception\ReadException;
 
 final class Dummy extends AbstractProtocol
 {
@@ -37,7 +36,7 @@ final class Dummy extends AbstractProtocol
      */
     public function onReceive(callable $callback): CallbackEvent
     {
-        // TODO: Implement onReceive() method.
+        return CallbackEvent::create($callback);
     }
 
 

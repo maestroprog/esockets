@@ -5,102 +5,87 @@ namespace Esockets\dummy;
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\CallbackEvent;
-use Esockets\base\exception\ReadException;
 use Esockets\base\IoAwareInterface;
-use Esockets\base\PingPacket;
 
 /**
  * Класс-заглушка ввода-вывода.
  */
 final class Dummy extends AbstractClient implements IoAwareInterface
 {
-    /**
-     * @inheritDoc
-     */
+    private $serverAddress;
+
     public function getServerAddress(): AbstractAddress
     {
-        // TODO: Implement getServerAddress() method.
+        return $this->serverAddress;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getClientAddress(): AbstractAddress
     {
-        // TODO: Implement getClientAddress() method.
+        return new DummyAddress();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getConnectionResource()
     {
-        // TODO: Implement getConnectionResource() method.
+        return null;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function connect(AbstractAddress $address)
     {
-        // TODO: Implement connect() method.
+        $this->serverAddress = $address;
     }
 
     public function onConnect(callable $callback): CallbackEvent
     {
-        // TODO: Implement onConnect() method.
+        return CallbackEvent::create($callback);
     }
 
     public function reconnect(): bool
     {
-        // TODO: Implement reconnect() method.
+        return true;
     }
 
     public function isConnected(): bool
     {
-        // TODO: Implement isConnected() method.
+        return true;
     }
 
     public function disconnect()
     {
-        // TODO: Implement disconnect() method.
+        ;
     }
 
     public function onDisconnect(callable $callback): CallbackEvent
     {
-        // TODO: Implement onDisconnect() method.
+        return CallbackEvent::create($callback);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function read(int $length, bool $force)
     {
-        // TODO: Implement read() method.
+        ;
     }
 
     public function getReceivedBytesCount(): int
     {
-        // TODO: Implement getReceivedBytesCount() method.
+        return 0;
     }
 
     public function getReceivedPacketCount(): int
     {
-        // TODO: Implement getReceivedPacketCount() method.
+        return 0;
     }
 
     public function send($data): bool
     {
-        // TODO: Implement send() method.
+        return true;
     }
 
     public function getTransmittedBytesCount(): int
     {
-        // TODO: Implement getTransmittedBytesCount() method.
+        return 0;
     }
 
     public function getTransmittedPacketCount(): int
     {
-        // TODO: Implement getTransmittedPacketCount() method.
+        return 0;
     }
 }

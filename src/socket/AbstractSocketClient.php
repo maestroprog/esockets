@@ -8,7 +8,6 @@ use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEvent;
 use Esockets\base\CallbackEventsContainer;
 use Esockets\base\exception\ConnectionException;
-use Esockets\base\PingPacket;
 
 abstract class AbstractSocketClient extends AbstractClient implements BlockingInterface
 {
@@ -110,12 +109,12 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     public function getClientAddress(): AbstractAddress
     {
         if (is_null($this->clientAddress) || !($this->clientAddress instanceof AbstractAddress)) {
-            $addr = $port = null;
-            socket_getsockname($this->socket, $addr, $port);
+            $address = $port = null;
+            socket_getsockname($this->socket, $address, $port);
             if ($this->socketDomain === AF_UNIX) {
-                $this->clientAddress = new Ipv4Address($addr, $port);
+                $this->clientAddress = new Ipv4Address($address, $port);
             } else {
-                $this->clientAddress = new UnixAddress($addr);
+                $this->clientAddress = new UnixAddress($address);
             }
         }
         return $this->clientAddress;
@@ -242,7 +241,7 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
 
     final private function __clone()
     {
-        ;
+        return null;
     }
 
     final private function __sleep()

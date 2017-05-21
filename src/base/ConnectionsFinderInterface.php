@@ -18,7 +18,7 @@ interface ConnectionsFinderInterface
      * @return CallbackEvent
      *
      * @example
-     * $connectionFinder->onFound(function(resource $socket){
+     * $connectionFinder->onFound(function($socket){
      *      return true; // every socket accept
      * });
      */

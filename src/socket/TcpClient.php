@@ -22,7 +22,7 @@ final class TcpClient extends AbstractSocketClient
                 $this->connected = true;
             }
         } else {
-            throw new \LogicException('Unknown socket address.');
+            throw new \LogicException('Unknown socket domain.');
         }
 
         if (!$this->connected) {

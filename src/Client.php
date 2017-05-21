@@ -42,9 +42,9 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface
         $this->reconnectInterval = $interval;
     }
 
-    public function getServerAddress(): AbstractAddress
+    public function getPeerAddress(): AbstractAddress
     {
-        return $this->connection->getServerAddress();
+        return $this->connection->getPeerAddress();
     }
 
     public function getClientAddress(): AbstractAddress

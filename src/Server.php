@@ -7,6 +7,7 @@ use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\BroadcastingInterface;
 use Esockets\base\CallbackEvent;
+use Esockets\base\CallbackEventsContainer;
 use Esockets\base\Configurator;
 use Esockets\base\ConnectionsFinderInterface;
 use Esockets\base\ConnectorInterface;
@@ -20,13 +21,12 @@ class Server implements ConnectorInterface, ConnectionsFinderInterface, Broadcas
     public function __construct(AbstractServer $server, Configurator $configurator)
     {
         $this->server = $server;
+        $this->eventFound = new CallbackEventsContainer();
         $this->clientsContainer = new ClientsContainer();
         $this->server->onFound(function ($connection) use ($configurator) {
             $peer = $configurator->makePeer($connection);
-            if (is_callable($this->eventFound)) {
-                call_user_func($this->eventFound, $peer);
-            }
-        });
+            $this->eventFound->callEvents($peer);
+        })->subscribe();
     }
 
     public function connect(AbstractAddress $address)
@@ -76,25 +76,14 @@ class Server implements ConnectorInterface, ConnectionsFinderInterface, Broadcas
 
     public function onFound(callable $callback): CallbackEvent
     {
-        return $this->server->onFound($callback);
+        return $this->eventFound->addEvent(CallbackEvent::create($callback));
     }
 
-    public function accept($connection)
-    {
-
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function read()
     {
         $this->clientsContainer->read();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function sendToAll($data): bool
     {
         return $this->clientsContainer->sendToAll($data);

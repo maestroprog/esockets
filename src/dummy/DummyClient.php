@@ -14,7 +14,7 @@ final class Dummy extends AbstractClient implements IoAwareInterface
 {
     private $serverAddress;
 
-    public function getServerAddress(): AbstractAddress
+    public function getPeerAddress(): AbstractAddress
     {
         return $this->serverAddress;
     }

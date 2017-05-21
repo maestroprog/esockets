@@ -33,6 +33,8 @@ final class TcpServer extends AbstractServer implements BlockingInterface
 
     public function __construct(int $socketDomain, SocketErrorHandler $errorHandler)
     {
+        $this->socketDomain = $socketDomain;
+
         $this->eventConnect = new CallbackEventsContainer();
         $this->eventDisconnect = new CallbackEventsContainer();
         $this->eventFound = new CallbackEventsContainer();
@@ -62,7 +64,7 @@ final class TcpServer extends AbstractServer implements BlockingInterface
                 $this->connected = true;
             }
         } else {
-            throw new \LogicException('Unknown socket address.');
+            throw new \LogicException('Unknown socket domain.');
         }
 
         if (!$this->connected) {

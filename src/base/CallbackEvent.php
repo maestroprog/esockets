@@ -20,9 +20,9 @@ final class CallbackEvent
     /**
      * Запускает вызов callback события.
      *
-     * @param array ...$arguments
+     * @param array $arguments
      */
-    public function call(...$arguments)
+    public function call(array $arguments)
     {
         if ($this->subscribed) {
             call_user_func_array($this->callback, $arguments);

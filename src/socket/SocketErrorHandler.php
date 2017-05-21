@@ -32,14 +32,26 @@ final class SocketErrorHandler
 
     private $socket;
 
-    public function __construct(resource $socket = null)
+    public function __construct($socket = null)
     {
+        if (!is_null($socket)) {
+            if (!is_resource($socket)) {
+                throw new ConnectionException('Socket don\'t is resource');
+            } elseif (get_resource_type($socket) !== 'Socket') {
+                throw new ConnectionException('Unknown resource type: ' . get_resource_type($socket));
+            }
+        }
         $this->socket = $socket;
         $this->checkConstants();
     }
 
-    public function setSocket(resource $socket)
+    public function setSocket($socket)
     {
+        if (!is_resource($socket)) {
+            throw new ConnectionException('Socket don\'t is resource');
+        } elseif (get_resource_type($socket) !== 'Socket') {
+            throw new ConnectionException('Unknown resource type: ' . get_resource_type($socket));
+        }
         $this->socket = $socket;
     }
 

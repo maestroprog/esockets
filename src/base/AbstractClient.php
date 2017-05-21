@@ -9,7 +9,7 @@ abstract class AbstractClient implements ConnectorInterface, IoAwareInterface
      *
      * @return AbstractAddress
      */
-    abstract public function getServerAddress(): AbstractAddress;
+    abstract public function getPeerAddress(): AbstractAddress;
 
     /**
      * Вернет адрес клиента, который подключен к серверу.

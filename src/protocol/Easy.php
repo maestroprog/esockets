@@ -47,10 +47,7 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
         if (is_null($data)) {
             return;
         }
-        if (!is_callable($this->eventReceive)) {
-            throw new \LogicException('OnReceive handler must be assigned.');
-        }
-        call_user_func($this->eventReceive, $data);
+        $this->eventReceive->callEvents($data);
     }
 
     /**

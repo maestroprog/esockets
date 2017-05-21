@@ -17,7 +17,8 @@ try {
 $server->onFound(function (\Esockets\Client $client) {
     _::log('Принял ' . $client->getPeerAddress() . '!');
     $client->onReceive(function ($data) use ($client) {
-        _::log('Получил от ' . $client->getPeerAddress() . ': "' . $data . '"!');
+        //_::log('Получил от ' . $client->getPeerAddress() . ': "' . $data . '"!');
+        $client->send('OK' . $data);
     })->subscribe();
     $client->onDisconnect(function () use ($client) {
         _::log('Пир ' . $client->getPeerAddress() . ' отсоединился от сервера');
@@ -37,11 +38,12 @@ while ($work) {
 
     $server->find(); // слушаем новые соединения
     $server->read(); // принимаем новые сообщения
+
     /*if (time() % 1000 === 0) {
         $server->ping();
     }*/
 
-    usleep(10000); // sleep for 10 ms
+    usleep(5000); // sleep for 10 ms
     if (extension_loaded('pcntl')) {
         pcntl_signal_dispatch();
     }

@@ -1,53 +1,55 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 25.03.2016
- * Time: 20:26
- */
-
-require 'common.php';
 
 use Esockets\debug\Log as _;
 
-$client = new Esockets\TcpClient(['socket_port' => 55667]);
-if ($client->connect()) {
+require 'common.php';
+
+$configurator = new \Esockets\base\Configurator(require 'config.php');
+
+$client = $configurator->makeClient();
+
+try {
+    $client->connect(new \Esockets\socket\Ipv4Address('127.0.0.1', '8081'));
     _::log('успешно соединился!');
+} catch (\Esockets\base\exception\ConnectionException $e) {
+    _::log('не соединился');
 }
 $client->onDisconnect(function () {
     _::log('Меня отсоединили или я сам отсоединился!');
 });
-$client->onRead(function ($msg) {
+$client->onReceive(function ($msg) {
     _::log('Получил что то: ' . $msg . ' !');
 });
-
+/*
 // симулируем увеличение нагрузки
 for ($i = 1; $i > 0; $i--) {
-
     $client->ping();
     usleep($i * 10000);
-}
+}*/
 
 $client->disconnect();
 unset($client);
 
 // симулируем множество клиентов
-/**
- * @var $clients \Esockets\TcpClient[]
- */
+
 $clients = [];
 for ($i = 0; $i < 10; $i++) {
 
-    $client = new Esockets\TcpClient(['socket_port' => 55667]);
-    if ($client->connect()) {
+    $client = $configurator->makeClient();
+
+    try {
+        $client->connect(new \Esockets\socket\Ipv4Address('127.0.0.1', '8081'));
         _::log('успешно соединился!');
+    } catch (\Esockets\base\exception\ConnectionException $e) {
+        _::log('не соединился');
     }
+
     $client->onDisconnect(function () {
         _::log('Меня отсоединили или я сам отсоединился!');
-    });
-    $client->onRead(function ($msg) {
+    })->subscribe();
+    $client->onReceive(function ($msg) {
         _::log('Получил что то: ' . $msg . ' !');
-    });
+    })->subscribe();
     $clients[$i] = $client;
     usleep(100000);
 }

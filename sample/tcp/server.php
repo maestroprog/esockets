@@ -1,12 +1,29 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 25.03.2016
- * Time: 20:26
- */
+
+use Esockets\debug\Log as _;
 
 require 'common.php';
+
+$configurator = new \Esockets\base\Configurator(require 'config.php');
+
+$server = $configurator->makeServer();
+try {
+    $server->connect(new \Esockets\socket\Ipv4Address('127.0.0.1', 8081));
+    _::log('Сервер слушает сокет');
+} catch (\Esockets\base\exception\ConnectionException $e) {
+    _::log('Не удалось запустить сервер!');
+    return;
+}
+$server->onFound(function (\Esockets\Client $client) {
+    _::log('Принял ' . $client->getPeerAddress() . '!');
+    $client->onReceive(function ($data) use ($client) {
+        _::log('Получил от ' . $client->getPeerAddress() . ': "' . $data . '"!');
+    })->subscribe();
+    $client->onDisconnect(function () use ($client) {
+        _::log('Пир ' . $client->getPeerAddress() . ' отсоединился от сервера');
+    })->subscribe();
+})->subscribe();
+
 $work = true;
 
 if (extension_loaded('pcntl')) {
@@ -16,38 +33,13 @@ if (extension_loaded('pcntl')) {
     }, false);
 }
 
-use Esockets\debug\Log as _;
-
-$server = new \Esockets\TcpServer(['socket_port' => 55667]);
-if (!$server->connect()) {
-    echo 'Не удалось запустить сервер!<br>' . PHP_EOL;
-    exit;
-} else {
-    echo 'Сервер слушает сокет<br>' . PHP_EOL;
-}
-$server->onConnectPeer(function ($peer) {
-    /**
-     * @var $peer \Esockets\Peer
-     */
-    _::log('Принял ' . $peer->getAddress() . ' !');
-    $peer->onRead(function ($msg) use ($peer) {
-        /**
-         * @var $this \Esockets\Peer
-         */
-        _::log('Получил от ' . $peer->getAddress() . $msg . ' !');
-    });
-    $peer->onDisconnect(function () use ($peer) {
-        _::log('Пир ' . $peer->getAddress() . ' отсоединился от сервера');
-    });
-});
-
 while ($work) {
 
-    $server->listen(); // слушаем новые соединения
+    $server->find(); // слушаем новые соединения
     $server->read(); // принимаем новые сообщения
-    if (time() % 1000 === 0) {
+    /*if (time() % 1000 === 0) {
         $server->ping();
-    }
+    }*/
 
     usleep(10000); // sleep for 10 ms
     if (extension_loaded('pcntl')) {
@@ -55,4 +47,4 @@ while ($work) {
     }
 }
 $server->disconnect();
-echo 'Успешно завершили работу!', PHP_EOL;
+_::log('Успешно завершили работу!');

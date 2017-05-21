@@ -10,7 +10,7 @@ define('INTERVAL', 1000); // 1ms
 
 ini_set('display_errors', true);
 error_reporting(E_ALL);
-ini_set('log_errors', true);
+ini_set('log_errors', false);
 ini_set('error_log', __DIR__ . '/messages.log');
 file_put_contents(__DIR__ . '/messages.log', '');
 

@@ -6,7 +6,6 @@ use Esockets\Client;
 
 /**
  * Интерфейс контейнера клиентов.
- * В контейнер клиента можно добавить
  */
 interface ClientsContainerInterface
 {
@@ -26,18 +25,34 @@ interface ClientsContainerInterface
     public function remove(Client $client);
 
     /**
-     * Отключает всех пиров, оставляя входящее соединение открытым.
+     * Вернёт список клиентов содержащихйся в контейнере.
      *
-     * @return void
+     * @return Client[]
      */
-    public function disconnectAll();
+    public function list(): array;
 
     /**
-     * Назначает обработчик события отсоединения всех пиров.
-     * Обработчик вызывается при отсоединении последнего подключенного пира.
+     * Проверяет, находится ли указанный клиент в контейнере.
      *
-     * @param callable $callback
-     * @return CallbackEvent
+     * @param Client $client
+     * @return bool
      */
-    public function onDisconnectAll(callable $callback): CallbackEvent;
+    public function exists(Client $client): bool;
+
+    /**
+     * Проверяет наличие клиента в контейнере по его адресу.
+     *
+     * @param AbstractAddress $address
+     * @return bool
+     */
+    public function existsByAddress(AbstractAddress $address): bool;
+
+    /**
+     * Вернёт клиент по его адресу.
+     *
+     * @param AbstractAddress $address
+     * @return Client
+     * @throws \RuntimeException если клиент не найден
+     */
+    public function getByAddress(AbstractAddress $address): Client;
 }

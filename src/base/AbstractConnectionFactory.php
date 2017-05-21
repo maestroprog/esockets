@@ -16,5 +16,5 @@ abstract class AbstractConnectionFactory
 
     abstract public function makeServer(): AbstractServer;
 
-    abstract public function makePeer($connectionResource): AbstractClient;
+    abstract public function makePeer($connectionResource, AbstractAddress $peerAddress = null): AbstractClient;
 }

@@ -7,39 +7,48 @@ use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEvent;
 use Esockets\base\CallbackEventsContainer;
+use Esockets\base\ClientsContainerInterface;
 use Esockets\base\exception\ConnectionException;
+use Esockets\base\HasClientsContainer;
+use Esockets\Client;
+use Esockets\ClientsContainer;
 
 /**
  * Простая реализация Tcp сервера.
  * После создания слушающего сокета,
  * сервер автоматически переключает его в неболокирующий режим.
  */
-final class TcpServer extends AbstractServer implements BlockingInterface
+final class TcpServer extends AbstractServer implements BlockingInterface, HasClientsContainer
 {
     use SocketTrait;
 
     /**
      * @var Ipv4Address|UnixAddress
      */
-    protected $listenAddress;
-    protected $socket;
-    protected $connected = false;
-
-    protected $errorHandler;
+    private $listenAddress;
+    private $socket;
+    private $connected = false;
+    private $errorHandler;
+    private $clientsContainer;
 
     private $eventConnect;
     private $eventDisconnect;
     private $eventFound;
 
-    public function __construct(int $socketDomain, SocketErrorHandler $errorHandler)
+    public function __construct(
+        int $socketDomain,
+        SocketErrorHandler $errorHandler,
+        ClientsContainerInterface $clientsContainer
+    )
     {
         $this->socketDomain = $socketDomain;
+        $this->errorHandler = $errorHandler;
+        $this->clientsContainer = $clientsContainer;
 
         $this->eventConnect = new CallbackEventsContainer();
         $this->eventDisconnect = new CallbackEventsContainer();
         $this->eventFound = new CallbackEventsContainer();
 
-        $this->errorHandler = $errorHandler;
         if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
             throw new ConnectionException(socket_strerror(socket_last_error()));
         } else {
@@ -129,10 +138,51 @@ final class TcpServer extends AbstractServer implements BlockingInterface
         return $this->eventDisconnect->addEvent(CallbackEvent::create($callback));
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function getConnectionResource()
+    {
+        return $this->socket;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getClientsContainer(): ClientsContainerInterface
+    {
+        return $this->clientsContainer;
+    }
+
     public function find()
     {
         if ($connection = socket_accept($this->socket)) {
             $this->eventFound->callEvents($connection);
+        }
+
+        /**
+         * @var $connectionsIndex Client[]
+         */
+        $connectionsIndex = [];
+        $connections = array_map(function (Client $client) use (&$connectionsIndex) {
+            $resource = $client->getConnectionResource();
+            $connectionsIndex[(int)$resource] = $client;
+            return $resource;
+        }, $this->clientsContainer->list());
+        $write = $except = [];
+
+        if (false === ($changed = socket_select($connections, $write, $except, 1))) {
+            $this->errorHandler->handleError();
+        } elseif ($changed > 0) {
+            foreach ($connections as $readConnection) {
+                $connectionsIndex[(int)$readConnection]->read();
+            }
+            foreach ($write as $writeConnection) {
+                // todo ?
+            }
+            foreach ($except as $exceptConnection) {
+                // todo
+            }
         }
     }
 

@@ -2,6 +2,9 @@
 
 namespace Esockets\base;
 
+/**
+ * Интерфейс поддержки соединений.
+ */
 interface ConnectorInterface
 {
     /**
@@ -19,4 +22,11 @@ interface ConnectorInterface
     public function disconnect();
 
     public function onDisconnect(callable $callback): CallbackEvent;
+
+    /**
+     * Должен вернуть ресурс соединения.
+     *
+     * @return resource|mixed
+     */
+    public function getConnectionResource();
 }

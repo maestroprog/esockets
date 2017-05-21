@@ -117,9 +117,9 @@ final class Configurator
         );
     }
 
-    public function makePeer($connectionResource)
+    public function makePeer($connectionResource, AbstractAddress $peerAddress = null)
     {
-        $peer = $this->connectionFactory->makePeer($connectionResource);
+        $peer = $this->connectionFactory->makePeer($connectionResource, $peerAddress);
         return new Client(
             $peer,
             new $this->protocolClass($peer)

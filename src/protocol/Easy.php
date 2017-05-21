@@ -12,7 +12,13 @@ use Esockets\base\PingPacket;
 use Esockets\base\AbstractProtocol;
 
 /**
- * "Легкий" протокол.
+ * Протокол-обёртка над php-шными структурами данных,
+ * передаваемых по сети.
+ * В задачи данного протокола входит:
+ *  - сериализация (json-изация) отправляемых структур данных
+ *  - партицирование получившихся сериализованных данных todo
+ *  - нумерация получившихся партиций, и их сборка после получения (только для UDP) todo
+ *  - десериализация полученных на другой стороне данных.
  */
 final class Easy extends AbstractProtocol implements PingSupportInterface
 {
@@ -25,7 +31,6 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
     const DATA_EXTENDED = 32; // reserved for objects
     const DATA_PING_PONG = 64; // reserved
     const DATA_CONTROL = 128;
-
 
     private $eventReceive;
     private $eventPong;
@@ -56,15 +61,12 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
     public function returnRead()
     {
         $result = null;
-        if (($data = $this->provider->read(5, false)) !== false) {
-            list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', $data));
-            if ($length > 0) {
-                if (($data = $this->provider->read($length, true)) !== false) {
-
-                } else {
-                    throw new ReadException('Cannot retrieve data', ReadException::ERROR_FAIL);
-                }
-            } else {
+        if (($data = $this->provider->read($this->provider->getMaxPacketSize(), false)) !== false) {
+            list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', substr($data, 0, 3)));
+            $data = substr($data, 3, strlen($data));
+            if ($length > 0 && !$data) {
+                throw new ReadException('Cannot retrieve data', ReadException::ERROR_FAIL);
+            } elseif (strlen($data) < $length) {
                 throw new ReadException(
                     sprintf('Not enough length: %d bytes', $length),
                     ReadException::ERROR_PROTOCOL
@@ -153,7 +155,7 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
         }
         // начиная с этого момента исходная "$data" становится "$raw"
         $length = strlen($raw);
-        if ($length >= 0xffff) { // 65535 bytes
+        if ($length - 4 >= $this->provider->getMaxPacketSize()) { // todo 65535 bytes
             throw new SendException('Big data size to send! I can split it\'s');
             // кто-то попытался передать более 64 КБ за раз, выдаем ошибку
             //...пока что

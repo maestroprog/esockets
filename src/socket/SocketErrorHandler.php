@@ -22,6 +22,7 @@ final class SocketErrorHandler
     /** Список известных ошибок для настройки обработчика */
     const ERRORS_KNOW = [
         'SOCKET_EWOULDBLOCK' => self::ERROR_NOTHING,
+        'SOCKET_EMSGSIZE' => self::ERROR_NOTHING,
         'SOCKET_EAGAIN' => self::ERROR_AGAIN,
         'SOCKET_TRY_AGAIN' => self::ERROR_AGAIN,
         'SOCKET_EPIPE' => self::ERROR_FATAL,
@@ -60,6 +61,9 @@ final class SocketErrorHandler
      */
     protected function checkConstants()
     {
+        if (!defined('SOCKET_ENOENT')) {
+            define('SOCKET_ENOENT', 2);
+        }
         if (!empty(self::$catchableErrors)) return;
         foreach (self::ERRORS_KNOW as $const => $selfType) {
             if (defined($const)) {
@@ -108,19 +112,23 @@ final class SocketErrorHandler
             $error = socket_last_error();
         }
         $errorMessage = socket_strerror($error);
+        if (PHP_OS === 'WINNT') {
+            $errorMessage = mb_convert_encoding($errorMessage, 'utf-8', 'windows-1251');
+        }
         switch ($error) {
-            case SOCKET_EADDRINUSE:
-                // если адрес используется,
-            case SOCKET_ECONNREFUSED:
-                // если отсутствует файл сокета,
-            case SOCKET_ENOENT:
-                // либо соединиться со слушающим сокетом не удалось
+            case 0:
+            case SOCKET_EWOULDBLOCK: // операции на незаблокированном сокет
+            case SOCKET_EMSGSIZE:
+                // ничего не делаем.
+                break;
+            case SOCKET_EADDRINUSE: // если адрес используется,
+            case SOCKET_ECONNREFUSED: // соединиться со слушающим сокетом не удалось
+            case SOCKET_ENOENT: // если отсутствует файл сокета,
                 throw new ConnectionException($errorMessage, ConnectionException::ERROR_FAIL_CONNECT);
             // break
-            default:
-                // в иных случаях кидаем исключение
+            default: // в иных случаях кидаем исключение
                 throw new ConnectionException(
-                    'Unknown connection error: ' . $errorMessage,
+                    'Unknown connection error ' . $error . ': ' . $errorMessage,
                     ConnectionException::ERROR_UNKNOWN
                 );
         }

@@ -2,10 +2,12 @@
 
 namespace Esockets\socket;
 
+use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractServer;
 use Esockets\base\AbstractConnectionFactory;
 use Esockets\base\exception\ConnectionFactoryException;
+use Esockets\ClientsContainer;
 
 final class SocketFactory extends AbstractConnectionFactory
 {
@@ -69,9 +71,9 @@ final class SocketFactory extends AbstractConnectionFactory
     public function makeClient(): AbstractClient
     {
         if ($this->socket_protocol === SOL_TCP) {
-            $client = TcpClient::createEmpty($this->socket_domain, new SocketErrorHandler());
+            $client = TcpClient::createEmpty($this->socket_domain, $this->makeErrorHandler());
         } elseif ($this->socket_protocol === SOL_UDP) {
-            $client = UdpClient::createEmpty($this->socket_domain, new SocketErrorHandler());
+            $client = UdpClient::createEmpty($this->socket_domain, $this->makeErrorHandler());
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');
         }
@@ -81,25 +83,34 @@ final class SocketFactory extends AbstractConnectionFactory
     public function makeServer(): AbstractServer
     {
         if ($this->socket_protocol === SOL_TCP) {
-            $client = new TcpServer($this->socket_domain, new SocketErrorHandler());
+            $client = new TcpServer($this->socket_domain, $this->makeErrorHandler(), new ClientsContainer());
         } elseif ($this->socket_protocol === SOL_UDP) {
-            $client = new UdpServer($this->socket_domain, new SocketErrorHandler());
+            $client = new UdpServer($this->socket_domain, $this->makeErrorHandler(), new ClientsContainer());
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');
         }
         return $client;
     }
 
-    public function makePeer($connectionResource): AbstractClient
+    public function makePeer($connectionResource, AbstractAddress $peerAddress = null): AbstractClient
     {
         if ($this->socket_protocol === SOL_TCP) {
-            $peer = TcpClient::createConnected($this->socket_domain, new SocketErrorHandler(), $connectionResource);
+            $peer = TcpClient::createConnected($this->socket_domain, $this->makeErrorHandler(), $connectionResource);
         } elseif ($this->socket_protocol === SOL_UDP) {
-            $peer = UdpClient::createConnected($this->socket_domain, new SocketErrorHandler(), $connectionResource);
+            $peer = UdpClient::createConnected(
+                $this->socket_domain,
+                $this->makeErrorHandler(),
+                $connectionResource, $peerAddress
+            );
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');
         }
         $peer->unblock();
         return $peer;
+    }
+
+    protected function makeErrorHandler(): SocketErrorHandler
+    {
+        return new SocketErrorHandler();
     }
 }

@@ -9,25 +9,30 @@ use Esockets\base\BroadcastingInterface;
 use Esockets\base\CallbackEvent;
 use Esockets\base\CallbackEventsContainer;
 use Esockets\base\Configurator;
-use Esockets\base\ConnectionsFinderInterface;
-use Esockets\base\ConnectorInterface;
+use Esockets\base\HasClientsContainer;
 
-class Server implements ConnectorInterface, ConnectionsFinderInterface, BroadcastingInterface, BlockingInterface
+class Server extends AbstractServer implements
+    BroadcastingInterface,
+    BlockingInterface
 {
     private $server;
-    private $clientsContainer;
     private $eventFound;
 
-    public function __construct(AbstractServer $server, Configurator $configurator)
+    public function __construct(
+        AbstractServer $server,
+        Configurator $configurator
+    )
     {
         $this->server = $server;
         $this->eventFound = new CallbackEventsContainer();
-        $this->clientsContainer = new ClientsContainer();
-        $this->server->onFound(function ($connection) use ($configurator) {
-            $peer = $configurator->makePeer($connection);
-            $this->clientsContainer->add($peer);
+
+        $this->server->onFound(function ($connection, AbstractAddress $peerAddress = null) use ($configurator) {
+            $peer = $configurator->makePeer($connection, $peerAddress);
+            if ($this->server instanceof HasClientsContainer) {
+                $this->server->getClientsContainer()->add($peer);
+            }
             $this->eventFound->callEvents($peer);
-        })->subscribe();
+        });
     }
 
     public function connect(AbstractAddress $address)
@@ -60,14 +65,28 @@ class Server implements ConnectorInterface, ConnectionsFinderInterface, Broadcas
         return $this->server->onDisconnect($callback);
     }
 
-    public function disconnectAll()
+    /**
+     * @inheritDoc
+     */
+    public function getConnectionResource()
     {
-        $this->clientsContainer->disconnectAll();
+        return $this->server->getConnectionResource();
     }
 
-    public function onDisconnectAll(callable $callback)
+    public function disconnectAll()
     {
-        $this->clientsContainer->onDisconnectAll($callback);
+        if (!$this->server instanceof HasClientsContainer) {
+            throw new \LogicException('Server does not have clients container.');
+        }
+        $this->server->getClientsContainer()->disconnectAll();
+    }
+
+    public function onDisconnectAll(callable $callback): CallbackEvent
+    {
+        if (!$this->server instanceof HasClientsContainer) {
+            throw new \LogicException('Server does not have clients container.');
+        }
+        return $this->server->getClientsContainer()->onDisconnectAll($callback);
     }
 
     public function find()
@@ -80,14 +99,12 @@ class Server implements ConnectorInterface, ConnectionsFinderInterface, Broadcas
         return $this->eventFound->addEvent(CallbackEvent::create($callback));
     }
 
-    public function read()
-    {
-        $this->clientsContainer->read();
-    }
-
     public function sendToAll($data): bool
     {
-        return $this->clientsContainer->sendToAll($data);
+        if (!$this->server instanceof HasClientsContainer) {
+            throw new \LogicException('Server does not have clients container.');
+        }
+        return $this->server->getClientsContainer()->sendToAll($data);
     }
 
     public function block()
@@ -103,29 +120,4 @@ class Server implements ConnectorInterface, ConnectionsFinderInterface, Broadcas
             $this->server->unblock();
         }
     }
-
-    /**
-     *
-     * protected function _onConnectPeer(&$connection)
-     * {
-     * while (isset($this->connections[$this->connections_dsc])) {
-     * $this->connections_dsc++;
-     * }
-     * if ($peer = new Peer($connection, $this->connections_dsc)) {
-     * $peer->setNonBlock();
-     * $this->connections[$this->connections_dsc] = &$peer;
-     * if (is_callable($this->event_accept)) {
-     * call_user_func_array($this->event_accept, [$peer]);
-     * }
-     * $peer->onDisconnect(function () use ($peer) {
-     * unset($this->connections[$peer->getDsc()]);
-     * $this->_onDisconnectPeer($peer);
-     * });
-     * return true;
-     * } else {
-     * trigger_error('Peer connection error');
-     * return false;
-     * }
-     * }
-     */
 }

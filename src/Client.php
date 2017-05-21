@@ -82,6 +82,11 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface
         return $this->connection->onDisconnect($callback);
     }
 
+    public function getConnectionResource()
+    {
+        return $this->connection->getConnectionResource();
+    }
+
     public function read()
     {
         $this->protocol->read();

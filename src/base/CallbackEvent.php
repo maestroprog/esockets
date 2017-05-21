@@ -5,7 +5,7 @@ namespace Esockets\base;
 final class CallbackEvent
 {
     private $callback;
-    private $subscribed = false;
+    private $subscribed = true; // default is subscribed
 
     public static function create(callable $callback)
     {

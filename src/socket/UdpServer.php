@@ -7,6 +7,7 @@ use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEvent;
 use Esockets\base\CallbackEventsContainer;
+use Esockets\base\ClientsContainerInterface;
 use Esockets\base\exception\ConnectionException;
 use Esockets\base\exception\ReadException;
 
@@ -17,32 +18,37 @@ final class UdpServer extends AbstractServer implements BlockingInterface
     /**
      * @var Ipv4Address|UnixAddress
      */
-    protected $listenAddress;
-    protected $socket;
-    protected $connected = false;
+    private $listenAddress;
+    private $socket;
+    private $connected = false;
 
-    protected $errorHandler;
+    private $errorHandler;
+    private $clientsContainer;
 
-    protected $eventConnect;
-    protected $eventDisconnect;
-    protected $eventFound;
+    private $eventConnect;
+    private $eventDisconnect;
+    private $eventFound;
 
-    public function __construct(int $socketDomain, SocketErrorHandler $errorHandler)
+    public function __construct(
+        int $socketDomain,
+        SocketErrorHandler $errorHandler,
+        ClientsContainerInterface $clientsContainer
+    )
     {
         $this->socketDomain = $socketDomain;
         $this->errorHandler = $errorHandler;
+        $this->clientsContainer = $clientsContainer;
 
         $this->eventConnect = new CallbackEventsContainer();
         $this->eventDisconnect = new CallbackEventsContainer();
         $this->eventFound = new CallbackEventsContainer();
 
-        $this->errorHandler = $errorHandler;
         if (!($this->socket = socket_create($socketDomain, SOCK_DGRAM, SOL_UDP))) {
             throw new ConnectionException(socket_strerror(socket_last_error()));
         } else {
             $this->errorHandler->setSocket($this->socket);
         }
-        socket_set_option($this->socket, SOL_UDP, SO_REUSEADDR, 1);
+        socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
     }
 
     /**
@@ -73,11 +79,7 @@ final class UdpServer extends AbstractServer implements BlockingInterface
             $this->eventConnect->callEvents();
         }
 
-        if (!socket_listen($this->socket)) {
-            $this->errorHandler->handleError();
-        } else {
-            $this->unblock();
-        }
+        //$this->unblock();
     }
 
     public function onConnect(callable $callback): CallbackEvent
@@ -122,13 +124,23 @@ final class UdpServer extends AbstractServer implements BlockingInterface
         return $this->eventDisconnect->addEvent(CallbackEvent::create($callback));
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function getConnectionResource()
+    {
+        return $this->socket;
+    }
+
     public function find()
     {
         $address = null;
         $port = 0;
-        $bytes = socket_recvfrom($this->socket, $buffer, 1, 0, $address, $port);
+        $bytes = socket_recvfrom($this->socket, $buffer, 1500, 0, $address, $port);
         if ($bytes === false) {
-            throw new ReadException('Fail while reading data from udp socket.', ReadException::ERROR_FAIL);
+//            throw new ReadException('Fail while reading data from udp socket.', ReadException::ERROR_FAIL);
+            $this->errorHandler->handleError();
+            return;
         } elseif ($bytes === 0) {
             throw new ReadException('0 bytes read from udp socket.', ReadException::ERROR_EMPTY);
         }
@@ -137,7 +149,14 @@ final class UdpServer extends AbstractServer implements BlockingInterface
         } else {
             $clientAddress = new UnixAddress($address);
         }
-        $this->eventFound->callEvents($clientAddress);
+        if (!$this->clientsContainer->existsByAddress($clientAddress)) {
+            $this->eventFound->callEvents($this->socket, $clientAddress);
+        }
+        $client = $this->clientsContainer->getByAddress($address);
+        if (!$client instanceof UdpClient) {
+            throw new \LogicException('Invalid client type: ' . get_class($client));
+        }
+        $client->
     }
 
     public function onFound(callable $callback): CallbackEvent

@@ -50,27 +50,26 @@ final class TcpClient extends AbstractSocketClient
                         if (PHP_OS !== 'WINNT' || $data === '') {
                             $this->disconnect();
                         }
-                        return false;
-                        break;
+                        return null;
                     case SocketErrorHandler::ERROR_AGAIN:
                         if ($data === false) {
                             // todo это вроде как только для unix систем
-                            return false;
+                            return null;
                         } elseif (!strlen($data) || $try++ > 100) {
                             //todo
                             $this->disconnect(); // TODO тут тоже закрыто. выяснить почему???
-                            return false;
+                            return null;
                         } elseif ($length > 0) {
                             usleep(self::SOCKET_WAIT);
                         }
                         continue 2;
                         break;
                     case SocketErrorHandler::ERROR_SKIP:
-                        return false;
+                        return null;
 
                     case SocketErrorHandler::ERROR_FATAL:
                         $this->disconnect(); // принудительно обрываем соединение, сбрасываем дескрипторы
-                        return false;
+                        return null;
 
                     case SocketErrorHandler::ERROR_UNKNOWN:
                         throw new \Exception(
@@ -112,12 +111,11 @@ final class TcpClient extends AbstractSocketClient
                 switch ($this->errorHandler->getErrorType(socket_last_error($this->socket), self::OP_WRITE)) {
                     case
                     SocketErrorHandler::ERROR_NOTHING:
-                        var_dump($wrote);
-                        throw new \Exception(
+                        /*throw new \Exception(
                             'Socket write no error: '
                             . socket_strerror(socket_last_error($this->socket)),
                             socket_last_error($this->socket)
-                        );
+                        );*/
                         break;
                     case SocketErrorHandler::ERROR_AGAIN:
                         usleep(self::SOCKET_WAIT);

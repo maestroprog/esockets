@@ -2,6 +2,7 @@
 
 namespace Esockets;
 
+use Esockets\base\AbstractAddress;
 use Esockets\base\BroadcastingInterface;
 use Esockets\base\CallbackEvent;
 use Esockets\base\CallbackEventsContainer;
@@ -31,7 +32,7 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
         $this->clients[$client->getPeerAddress()->__toString()] = $client;
         $client->onDisconnect(function () use ($client) {
             $this->remove($client);
-        })->subscribe();
+        });
     }
 
     public function remove(Client $client)
@@ -46,6 +47,43 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
         }
     }
 
+    /**
+     * @return Client[]
+     */
+    public function list(): array
+    {
+        return $this->clients;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function exists(Client $client): bool
+    {
+        // TODO: Implement exists() method.
+        throw new \BadMethodCallException('Todo: implement this method.');
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function existsByAddress(AbstractAddress $address): bool
+    {
+        return array_key_exists($address->__toString(), $this->clients);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getByAddress(AbstractAddress $address): Client
+    {
+        if (!$this->existsByAddress($address)) {
+            throw new \RuntimeException('Client not found.');
+        }
+        return $this->clients[$address->__toString()];
+    }
+
+
     public function disconnectAll()
     {
         array_walk($this->clients, function (Client $client) {
@@ -56,16 +94,6 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
     public function onDisconnectAll(callable $callback): CallbackEvent
     {
         return $this->eventDisconnectAll->addEvent(CallbackEvent::create($callback));
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function read()
-    {
-        foreach ($this->clients as $client) {
-            $client->read();
-        }
     }
 
     /**

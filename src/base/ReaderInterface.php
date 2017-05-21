@@ -4,6 +4,12 @@ namespace Esockets\base;
 
 use Esockets\base\exception\ReadException;
 
+/**
+ * Интерфейс поддержки чтения данных двумя разными способами:
+ * 1. @see self::read чтение и вызов @see CallbackEvent отвечающий за принятие данных,
+ * 2. @see self::returnRead чтение и возврат прочитанных данных из метода;
+ *    если читать нечего, то метод вернёт NULL.
+ */
 interface ReaderInterface
 {
     /**

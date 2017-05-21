@@ -2,10 +2,13 @@
 
 namespace Esockets\base;
 
+/**
+ * Интерфейс поиска новых или изменившихся соединений.
+ */
 interface ConnectionsFinderInterface
 {
     /**
-     * Find the new connections.
+     * Ищет новые или изменившиеся соединения.
      *
      * @return void
      */

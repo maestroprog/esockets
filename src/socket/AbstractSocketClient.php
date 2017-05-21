@@ -52,13 +52,15 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
      * @param int $socketDomain
      * @param SocketErrorHandler $errorHandler
      * @param $socket
+     * @param $peerAddress AbstractAddress
      * @return AbstractSocketClient
      * @throws ConnectionException
      */
     public static function createConnected(
         int $socketDomain,
         SocketErrorHandler $errorHandler,
-        $socket = null
+        $socket = null,
+        AbstractAddress $peerAddress = null
     ): self
     {
         if (!is_null($socket)) {
@@ -68,10 +70,15 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
                 throw new ConnectionException('Unknown resource type: ' . get_resource_type($socket));
             }
         }
-        return new static($socketDomain, $errorHandler, $socket);
+        return new static($socketDomain, $errorHandler, $socket, $peerAddress);
     }
 
-    final private function __construct(int $socketDomain, SocketErrorHandler $errorHandler, $socket = null)
+    final private function __construct(
+        int $socketDomain,
+        SocketErrorHandler $errorHandler,
+        $socket = null,
+        AbstractAddress $peerAddress = null
+    )
     {
         $this->socketDomain = $socketDomain;
         $this->errorHandler = $errorHandler;
@@ -106,8 +113,12 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
             $this->socket = $socket;
             $this->connected = true;
             $this->errorHandler->setSocket($this->socket);
+            $this->serverAddress = $peerAddress;
         }
-        socket_setopt($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
+        if (get_class($this) === TcpClient::class) {
+            socket_setopt($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
+            socket_setopt($this->socket, SOL_SOCKET, TCP_NODELAY, 1);
+        }
     }
 
     public function getPeerAddress(): AbstractAddress
@@ -169,9 +180,10 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
 
     public function disconnect()
     {
-        if (!is_resource($this->socket) || get_resource_type($this->socket) !== 'Socket') {
+        if (!$this->connected || !is_resource($this->socket) || get_resource_type($this->socket) !== 'Socket') {
             throw new \LogicException('Socket already is disconnected.');
         }
+        $this->connected = false;
         socket_shutdown($this->socket);
         $this->block(); // блокируем сокет перед его закрытием
         socket_close($this->socket);
@@ -191,6 +203,11 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     public function unblock()
     {
         socket_set_nonblock($this->socket);
+    }
+
+    public function getMaxPacketSize(): int
+    {
+        return 1500; // MTU
     }
 
     public function getReceivedBytesCount(): int

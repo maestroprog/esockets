@@ -16,13 +16,7 @@ final class UdpClient extends AbstractSocketClient
 
         $this->serverAddress = $serverAddress;
 
-        try {
-            if ($this->send(1)) {
-                $this->connected = true;
-            }
-        } catch (SendException $e) {
-            ;
-        }
+        $this->connected = true;
 
         if (!$this->connected) {
             $this->errorHandler->handleError();
@@ -31,6 +25,13 @@ final class UdpClient extends AbstractSocketClient
             $this->eventConnect->callEvents();
         }
     }
+
+    public function disconnect()
+    {
+        $this->connected = false;
+        $this->eventDisconnect->callEvents();
+    }
+
 
     public function read(int $length, bool $force)
     {
@@ -46,8 +47,11 @@ final class UdpClient extends AbstractSocketClient
         }
         $bytes = socket_recvfrom($this->socket, $buffer, $length, 0, $address, $port);
         if ($bytes === false) {
-            throw new ReadException('Fail while reading data from udp socket.', ReadException::ERROR_FAIL);
+            $this->errorHandler->handleError();
+            return false;
         } elseif ($bytes === 0) {
+            var_dump($bytes, $length, $buffer);
+            $this->errorHandler->handleError();
             throw new ReadException('0 bytes read from udp socket.', ReadException::ERROR_EMPTY);
         }
 

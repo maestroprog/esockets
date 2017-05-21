@@ -4,15 +4,35 @@ namespace Esockets\protocol;
 
 use Esockets\base\AbstractProtocol;
 use Esockets\base\CallbackEvent;
+use Esockets\base\CallbackEventsContainer;
+use Esockets\base\IoAwareInterface;
 
+/**
+ * Не-протокол, использующийся поверх TCP или UDP.
+ * Для передачи потока байт.
+ */
 final class Dummy extends AbstractProtocol
 {
+    private $eventReceive;
+
+    /**
+     * @inheritDoc
+     */
+    public function __construct(IoAwareInterface $provider)
+    {
+        parent::__construct($provider);
+
+        $this->eventReceive = new CallbackEventsContainer();
+    }
+
     /**
      * @inheritdoc
      */
     public function read()
     {
-        return $this->provider->read(1, false);
+        if (null !== ($data = $this->provider->read($this->provider->getMaxPacketSize(), false))) {
+            $this->eventReceive->callEvents($data);
+        }
     }
 
     /**
@@ -20,6 +40,12 @@ final class Dummy extends AbstractProtocol
      */
     public function send($data): bool
     {
+        if (strlen($data) > $this->provider->getMaxPacketSize()) {
+            $packets = str_split($data, $this->provider->getMaxPacketSize());
+            array_walk($packets, function (string $packet) {
+                $this->provider->send($packet);
+            });
+        }
         return $this->provider->send($data);
     }
 
@@ -28,7 +54,7 @@ final class Dummy extends AbstractProtocol
      */
     public function returnRead()
     {
-        return $this->provider->read(1, false);
+        return $this->provider->read($this->provider->getMaxPacketSize(), false);
     }
 
     /**
@@ -36,6 +62,6 @@ final class Dummy extends AbstractProtocol
      */
     public function onReceive(callable $callback): CallbackEvent
     {
-        return CallbackEvent::create($callback);
+        return $this->eventReceive->addEvent(CallbackEvent::create($callback));
     }
 }

@@ -28,6 +28,7 @@ final class TcpClient extends AbstractSocketClient
         if (!$this->connected) {
             $this->errorHandler->handleError();
         } else {
+            $this->unblock();
             $this->eventConnect->callEvents();
         }
     }
@@ -39,9 +40,14 @@ final class TcpClient extends AbstractSocketClient
         do {
             $data = socket_read($this->socket, $length);
             if ($data === false || $data === '') {
-                switch ($this->errorHandler->getErrorType(socket_last_error($this->socket), self::OP_READ)) {
+                $errorType = $this->errorHandler->getErrorType(
+                    socket_last_error($this->socket),
+                    self::OP_READ
+                );
+                switch ($errorType) {
+
                     case SocketErrorHandler::ERROR_NOTHING:
-                        if (PHP_OS !== 'WINNT') {
+                        if (PHP_OS !== 'WINNT' || $data === '') {
                             $this->disconnect();
                         }
                         return false;

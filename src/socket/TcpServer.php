@@ -104,6 +104,13 @@ final class TcpServer extends AbstractServer implements BlockingInterface
 
     public function disconnect()
     {
+        if (!is_resource($this->socket) || get_resource_type($this->socket) !== 'Socket') {
+            throw new \LogicException('Socket already is disconnected.');
+        }
+        socket_shutdown($this->socket);
+        $this->block(); // блокируем сокет перед его закрытием
+        socket_close($this->socket);
+
         if ($this->isUnixAddress()) {
             if (file_exists($this->listenAddress->getSockPath())) {
                 unlink($this->listenAddress->getSockPath());

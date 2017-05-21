@@ -27,6 +27,7 @@ final class UdpClient extends AbstractSocketClient
         if (!$this->connected) {
             $this->errorHandler->handleError();
         } else {
+            $this->unblock();
             $this->eventConnect->callEvents();
         }
     }

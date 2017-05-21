@@ -163,6 +163,16 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface
         return $alive;
     }
 
+    public function getStatistic(): ClientStatistic
+    {
+        return new ClientStatistic(
+            $this->connection->getReceivedBytesCount(),
+            $this->connection->getReceivedPacketCount(),
+            $this->connection->getTransmittedBytesCount(),
+            $this->connection->getTransmittedPacketCount()
+        );
+    }
+
     protected function getTime(string $key = self::TIME_LAST_CHECK): int
     {
         return $this->times[$key] ?? 0;

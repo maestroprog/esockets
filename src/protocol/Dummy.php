@@ -12,7 +12,7 @@ final class Dummy extends AbstractProtocol
      */
     public function read()
     {
-        return $this->provider->read(0, false);
+        return $this->provider->read(1, false);
     }
 
     /**
@@ -38,6 +38,4 @@ final class Dummy extends AbstractProtocol
     {
         return CallbackEvent::create($callback);
     }
-
-
 }

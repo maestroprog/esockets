@@ -99,6 +99,7 @@ final class SocketFactory extends AbstractConnectionFactory
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');
         }
+        $peer->unblock();
         return $peer;
     }
 }

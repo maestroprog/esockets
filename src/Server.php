@@ -25,6 +25,7 @@ class Server implements ConnectorInterface, ConnectionsFinderInterface, Broadcas
         $this->clientsContainer = new ClientsContainer();
         $this->server->onFound(function ($connection) use ($configurator) {
             $peer = $configurator->makePeer($connection);
+            $this->clientsContainer->add($peer);
             $this->eventFound->callEvents($peer);
         })->subscribe();
     }

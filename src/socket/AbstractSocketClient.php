@@ -26,12 +26,10 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     protected $eventConnect;
     protected $eventDisconnect;
 
-
     protected $receivedBytes = 0;
     protected $receivedPackets = 0;
     protected $transmittedBytes = 0;
     protected $transmittedPackets = 0;
-
 
     /** Интервал времени ожидания между попытками при чтении/записи. */
     const SOCKET_WAIT = 1;
@@ -109,6 +107,7 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
             $this->connected = true;
             $this->errorHandler->setSocket($this->socket);
         }
+        socket_setopt($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
     }
 
     public function getPeerAddress(): AbstractAddress
@@ -170,14 +169,13 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
 
     public function disconnect()
     {
-        if ($this->socket) {
-            $this->block(); // блокируем сокет перед завершением его работы
-            socket_shutdown($this->socket);
-            socket_close($this->socket);
-            $this->eventDisconnect->callEvents();
-        } else {
-            throw new \LogicException('Socket already is closed.');
+        if (!is_resource($this->socket) || get_resource_type($this->socket) !== 'Socket') {
+            throw new \LogicException('Socket already is disconnected.');
         }
+        socket_shutdown($this->socket);
+        $this->block(); // блокируем сокет перед его закрытием
+        socket_close($this->socket);
+        $this->eventDisconnect->callEvents();
     }
 
     public function onDisconnect(callable $callback): CallbackEvent

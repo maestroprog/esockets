@@ -28,18 +28,19 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
 
     public function add(Client $client)
     {
-        $this->clients[$client->getClientAddress()->__toString()] = $client;
+        $this->clients[$client->getPeerAddress()->__toString()] = $client;
         $client->onDisconnect(function () use ($client) {
             $this->remove($client);
-        });
+        })->subscribe();
     }
 
     public function remove(Client $client)
     {
-        $key = $client->getClientAddress()->__toString();
-        if (isset($this->clients[$key])) {
-            unset($this->clients[$key]);
+        $key = $client->getPeerAddress()->__toString();
+        if (!isset($this->clients[$key])) {
+            throw new \LogicException('Client already removed or not found.');
         }
+        unset($this->clients[$key]);
         if (count($this->clients) === 0) {
             $this->eventDisconnectAll->callEvents();
         }

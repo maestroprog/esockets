@@ -2,7 +2,10 @@
 
 use Esockets\debug\Log as _;
 
-require 'common.php';
+set_time_limit(0);
+require __DIR__ . '/../../src/bootstrap.php';
+
+_::setEnv('server');
 
 $configurator = new \Esockets\base\Configurator(require 'config.php');
 
@@ -14,36 +17,32 @@ try {
     _::log('Не удалось запустить сервер!');
     return;
 }
+
 $server->onFound(function (\Esockets\Client $client) {
-    _::log('Принял ' . $client->getPeerAddress() . '!');
+    _::log('Присоединился новый клиент: ' . $client->getPeerAddress());
     $client->onReceive(function ($data) use ($client) {
-        //_::log('Получил от ' . $client->getPeerAddress() . ': "' . $data . '"!');
-        $client->send('OK' . $data);
-    })->subscribe();
+        _::log('Получил от клиента ' . $client->getPeerAddress() . ' сообщение: "' . $data . '"');
+        $client->send('Hello world!');
+    });
     $client->onDisconnect(function () use ($client) {
-        _::log('Пир ' . $client->getPeerAddress() . ' отсоединился от сервера');
-    })->subscribe();
-})->subscribe();
+        _::log('Клиент ' . $client->getPeerAddress() . ' отсоединился');
+    });
+});
 
 $work = true;
 
 if (extension_loaded('pcntl')) {
     pcntl_signal(SIGINT, function (int $signo) use (&$work) {
         $work = false;
-        var_dump($signo);
+        _::log('Обработал сигнал: ' . $signo);
     }, false);
 }
 
 while ($work) {
 
     $server->find(); // слушаем новые соединения
-    $server->read(); // принимаем новые сообщения
 
-    /*if (time() % 1000 === 0) {
-        $server->ping();
-    }*/
-
-    usleep(5000); // sleep for 10 ms
+    usleep(10000); // sleep for 10 ms
     if (extension_loaded('pcntl')) {
         pcntl_signal_dispatch();
     }

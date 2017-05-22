@@ -1,48 +1,67 @@
 <?php
 
 use Esockets\base\AbstractProtocol;
+use Esockets\base\CallbackEvent;
 
-final class Protocol extends AbstractProtocol
+final class HttpProtocol extends AbstractProtocol
 {
-
     /**
-     * It reads the data as they become available,
-     * and returns the data, if necessary.
-     *
-     * @return mixed|void
-     * @throws \Esockets\base\exception\ReadException
-     */
-    public function read(): bool
-    {
-        // TODO: Implement read() method.
-    }
-
-    /**
-     * Read and returns the read data.
-     * Returns void if there is no data to read.
-     *
-     * @return mixed|void
-     * @throws \Esockets\base\exception\ReadException
+     * @inheritdoc
      */
     public function returnRead()
     {
-        // TODO: Implement returnRead() method.
+        $buffer = '';
+        $read = false;
+        $data = $this->provider->read($this->provider->getMaxPacketSize(), false);
+        /*while (!is_null()) {
+            $buffer .= $data;
+            $read = true;
+        }*/
+        if (!is_null($data)) {
+            $buffer .= $data;
+            $read = true;
+        }
+        if ($read) {
+            list($headers, $other) = explode("\r\n\r\n", $buffer, 2);
+            $headers = explode("\r\n", $headers);
+            $i = 0;
+            $requestUri = '/';
+            $parsedHeaders = [];
+            foreach ($headers as $header) {
+                if ($i === 0) {
+                    list($method, $requestUri, $version) = explode(' ', $header, 3);
+                } else {
+                    list($header, $value) = explode(':', $header, 2);
+                    $parsedHeaders[$header] = $value;
+                }
+                $i++;
+            }
+            return new HttpRequest($requestUri);
+        }
+        return null;
     }
 
     /**
-     * Assigns handler for received data.
-     *
-     * @param callable $callback
-     *
-     * @return void
+     * @inheritdoc
      */
-    public function onReceive(callable $callback)
+    public function onReceive(callable $callback): CallbackEvent
     {
-        // TODO: Implement onReceive() method.
+        return $this->eventReceive->addEvent(CallbackEvent::create($callback));
     }
 
     public function send($data): bool
     {
-        // TODO: Implement send() method.
+        if ($data instanceof HttpResponse) {
+            $data = implode("\r\n", [
+                sprintf('HTTP/1.0 %d %s', $data->getCode(), $data->getStatus()),
+                'Content-Type: text/html; charset=utf-8',
+                sprintf('Content-Length: %d', strlen($data->getBody())),
+                'Connection: close',
+                '',
+                $data->getBody(),
+                ''
+            ]);
+        }
+        return $this->provider->send($data);
     }
 }

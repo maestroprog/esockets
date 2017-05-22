@@ -1,12 +1,16 @@
 <?php
 
-/**
- * Created by PhpStorm.
- * User: maestroprog
- * Date: 22.05.2017
- * Time: 21:12
- */
 class HttpRequest
 {
+    private $requestUri;
 
+    public function __construct(string $requestUri)
+    {
+        $this->requestUri = $requestUri;
+    }
+
+    public function getRequestUri(): string
+    {
+        return $this->requestUri;
+    }
 }

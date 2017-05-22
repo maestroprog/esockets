@@ -6,6 +6,8 @@
  * Time: 18:10
  */
 
+var_dump(get_defined_constants(true));
+exit;
 use Esockets\debug\Log;
 
 require_once 'tcp/common.php';

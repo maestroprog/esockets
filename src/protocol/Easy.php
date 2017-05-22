@@ -34,7 +34,6 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
 
     const HEADER_LENGTH = 5;
 
-    private $eventReceive;
     private $eventPong;
 
     /**
@@ -43,18 +42,6 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
     public function __construct(IoAwareInterface $provider)
     {
         parent::__construct($provider);
-
-        $this->eventReceive = new CallbackEventsContainer();
-    }
-
-    public function read(): bool
-    {
-        $data = $this->returnRead();
-        if (is_null($data)) {
-            return false;
-        }
-        $this->eventReceive->callEvents($data);
-        return true;
     }
 
     private $buffer = '';

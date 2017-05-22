@@ -12,7 +12,6 @@ use Esockets\base\ClientsContainerInterface;
 use Esockets\base\exception\ConnectionException;
 use Esockets\base\HasClientsContainer;
 use Esockets\Client;
-use Esockets\ClientsContainer;
 
 /**
  * Простая реализация Tcp сервера.
@@ -22,6 +21,8 @@ use Esockets\ClientsContainer;
 final class TcpServer extends AbstractServer implements BlockingInterface, HasClientsContainer
 {
     use SocketTrait;
+
+    private $maxConn;
 
     /**
      * @var Ipv4Address|UnixAddress
@@ -42,11 +43,13 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
 
     public function __construct(
         int $socketDomain,
+        int $maxConn,
         SocketErrorHandler $errorHandler,
         ClientsContainerInterface $clientsContainer
     )
     {
         $this->socketDomain = $socketDomain;
+        $this->maxConn = $maxConn;
         $this->errorHandler = $errorHandler;
         $this->clientsContainer = $clientsContainer;
 
@@ -88,7 +91,7 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
             $this->eventConnect->callEvents();
         }
 
-        if (!socket_listen($this->socket)) {
+        if (!socket_listen($this->socket, $this->maxConn)) {
             $this->errorHandler->handleError();
         } else {
             $this->unblock();
@@ -104,7 +107,6 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     {
         $this->disconnect();
         try {
-
             $this->connect($this->listenAddress);
         } catch (ConnectionException $e) {
             return false;
@@ -162,10 +164,6 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
 
     public function find()
     {
-        if ($connection = socket_accept($this->socket)) {
-            $this->eventFound->callEvents(new SocketConnectionResource($connection));
-        }
-
         /**
          * @var $connectionsIndex Client[]
          */
@@ -183,6 +181,10 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
             foreach ($connections as $idx => $readConnection) {
                 if ($idx > -1) {
                     $connectionsIndex[(int)$readConnection]->read();
+                } else {
+                    if ($connection = socket_accept($this->socket)) {
+                        $this->eventFound->callEvents(new SocketConnectionResource($connection));
+                    }
                 }
             }
             foreach ($write as $writeConnection) {

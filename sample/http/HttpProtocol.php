@@ -12,7 +12,7 @@ final class Protocol extends AbstractProtocol
      * @return mixed|void
      * @throws \Esockets\base\exception\ReadException
      */
-    public function read()
+    public function read(): bool
     {
         // TODO: Implement read() method.
     }

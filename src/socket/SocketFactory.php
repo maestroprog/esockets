@@ -2,7 +2,6 @@
 
 namespace Esockets\socket;
 
-use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
@@ -13,15 +12,18 @@ use Esockets\ClientsContainer;
 final class SocketFactory extends AbstractConnectionFactory
 {
     const SOCKET_DOMAIN = 'socket_domain';
+    const SOCKET_TCP_MAX_CONN = 'socket_max_conn';
     const SOCKET_PROTOCOL = 'socket_protocol';
 
     const DEFAULTS = [
         self::SOCKET_DOMAIN => AF_INET,
         self::SOCKET_PROTOCOL => SOL_TCP,
+        self::SOCKET_TCP_MAX_CONN => 1024,
     ];
 
     private $socket_domain;
     private $socket_protocol;
+    private $socket_max_conn;
 
     /**
      * @inheritDoc
@@ -84,7 +86,12 @@ final class SocketFactory extends AbstractConnectionFactory
     public function makeServer(): AbstractServer
     {
         if ($this->socket_protocol === SOL_TCP) {
-            $client = new TcpServer($this->socket_domain, $this->makeErrorHandler(), new ClientsContainer());
+            $client = new TcpServer(
+                $this->socket_domain,
+                $this->socket_max_conn,
+                $this->makeErrorHandler(),
+                new ClientsContainer()
+            );
         } elseif ($this->socket_protocol === SOL_UDP) {
             $client = new UdpServer($this->socket_domain, $this->makeErrorHandler(), new ClientsContainer());
         } else {

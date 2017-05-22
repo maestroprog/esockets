@@ -38,7 +38,8 @@ final class TcpClient extends AbstractSocketClient
         $buffer = '';
         $try = 0;
         do {
-            $data = socket_read($this->socket, $length);
+            $data = '';
+            $bytes = socket_recv($this->socket, $data, $length, 0);
             if ($data === false || $data === '') {
                 $errorType = $this->errorHandler->getErrorType(
                     socket_last_error($this->socket),

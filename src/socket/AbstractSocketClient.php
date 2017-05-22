@@ -122,10 +122,9 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
             }
         }
         if (get_class($this) === TcpClient::class) {
-            socket_set_option($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
+//            socket_set_option($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
 //            socket_set_option($this->socket, SOL_SOCKET, SO_DEBUG, 1);
 //            socket_set_option($this->socket, SOL_TCP, TCP_NODELAY, 1);
-            var_dump(socket_get_option($this->socket, SOL_TCP, TCP_NODELAY));
         }
     }
 
@@ -192,10 +191,10 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
             throw new \LogicException('Socket already is disconnected.');
         }
         $this->connected = false;
-        socket_shutdown($this->socket);
-        $this->block(); // блокируем сокет перед его закрытием
-        socket_close($this->socket);
         $this->eventDisconnect->callEvents();
+        $this->block(); // блокируем сокет перед его закрытием
+        socket_shutdown($this->socket);
+        socket_close($this->socket);
     }
 
     public function onDisconnect(callable $callback): CallbackEvent

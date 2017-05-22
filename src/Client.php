@@ -6,6 +6,7 @@ use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractProtocol;
+use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEvent;
 use Esockets\base\ConnectorInterface;
 use Esockets\base\PingPacket;
@@ -13,7 +14,7 @@ use Esockets\base\PingSupportInterface;
 use Esockets\base\ReaderInterface;
 use Esockets\base\SenderInterface;
 
-class Client implements ConnectorInterface, ReaderInterface, SenderInterface
+class Client implements ConnectorInterface, ReaderInterface, SenderInterface, BlockingInterface
 {
     private $connection;
     private $protocol;
@@ -91,9 +92,9 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface
     public function read(): bool
     {
         $read = false;
-        while ($this->protocol->read()) {
+        while ($this->isConnected() && $this->protocol->read()) {
             $read = true;
-        };
+        }
         return $read;
     }
 
@@ -130,7 +131,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface
             $this->protocol->ping($pingRequest);
         } else {
             $this->protocol->send($pingRequest);
-            throw new \LogicException('Protocol ' . get_class($this->protocol) . ' has no support ping.');
+            throw new \LogicException('HttpProtocol ' . get_class($this->protocol) . ' has no support ping.');
         }
     }
 
@@ -181,6 +182,26 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface
             $this->connection->getTransmittedBytesCount(),
             $this->connection->getTransmittedPacketCount()
         );
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function block()
+    {
+        if ($this->connection instanceof BlockingInterface) {
+            $this->connection->block();
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function unblock()
+    {
+        if ($this->connection instanceof BlockingInterface) {
+            $this->connection->unblock();
+        }
     }
 
     protected function getTime(string $key = self::TIME_LAST_CHECK): int

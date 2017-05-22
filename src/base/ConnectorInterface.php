@@ -26,7 +26,7 @@ interface ConnectorInterface
     /**
      * Должен вернуть ресурс соединения.
      *
-     * @return resource|mixed
+     * @return AbstractConnectionResource
      */
-    public function getConnectionResource();
+    public function getConnectionResource(): AbstractConnectionResource;
 }

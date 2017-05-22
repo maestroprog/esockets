@@ -18,6 +18,11 @@ final class UnixAddress extends AbstractAddress
         return $this->sockPath;
     }
 
+    public function equalsTo(AbstractAddress $address): bool
+    {
+        return $this->__toString() === $address->__toString();
+    }
+
     public function __toString(): string
     {
         return $this->sockPath;

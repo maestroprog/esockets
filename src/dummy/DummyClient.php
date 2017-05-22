@@ -24,7 +24,7 @@ final class Dummy extends AbstractClient implements IoAwareInterface
         return new DummyAddress();
     }
 
-    public function getConnectionResource()
+    public function getConnectionResource():AbstractConnectionResource
     {
         return null;
     }

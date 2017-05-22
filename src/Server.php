@@ -3,6 +3,7 @@
 namespace Esockets;
 
 use Esockets\base\AbstractAddress;
+use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\BroadcastingInterface;
@@ -26,8 +27,8 @@ class Server extends AbstractServer implements
         $this->server = $server;
         $this->eventFound = new CallbackEventsContainer();
 
-        $this->server->onFound(function ($connection, AbstractAddress $peerAddress = null) use ($configurator) {
-            $peer = $configurator->makePeer($connection, $peerAddress);
+        $this->server->onFound(function ($connection) use ($configurator) {
+            $peer = $configurator->makePeer($connection);
             if ($this->server instanceof HasClientsContainer) {
                 $this->server->getClientsContainer()->add($peer);
             }
@@ -68,7 +69,7 @@ class Server extends AbstractServer implements
     /**
      * @inheritDoc
      */
-    public function getConnectionResource()
+    public function getConnectionResource(): AbstractConnectionResource
     {
         return $this->server->getConnectionResource();
     }
@@ -78,7 +79,11 @@ class Server extends AbstractServer implements
         if (!$this->server instanceof HasClientsContainer) {
             throw new \LogicException('Server does not have clients container.');
         }
-        $this->server->getClientsContainer()->disconnectAll();
+        $clientsContainer = $this->server->getClientsContainer();
+        if (!$clientsContainer instanceof BroadcastingInterface) {
+            throw new \LogicException('Clients container does not support disconnectAll().');
+        }
+        $clientsContainer->disconnectAll();
     }
 
     public function onDisconnectAll(callable $callback): CallbackEvent
@@ -86,7 +91,11 @@ class Server extends AbstractServer implements
         if (!$this->server instanceof HasClientsContainer) {
             throw new \LogicException('Server does not have clients container.');
         }
-        return $this->server->getClientsContainer()->onDisconnectAll($callback);
+        $clientsContainer = $this->server->getClientsContainer();
+        if (!$clientsContainer instanceof BroadcastingInterface) {
+            throw new \LogicException('Clients container does not support onDisconnectAll().');
+        }
+        return $clientsContainer->onDisconnectAll($callback);
     }
 
     public function find()
@@ -104,7 +113,11 @@ class Server extends AbstractServer implements
         if (!$this->server instanceof HasClientsContainer) {
             throw new \LogicException('Server does not have clients container.');
         }
-        return $this->server->getClientsContainer()->sendToAll($data);
+        $clientsContainer = $this->server->getClientsContainer();
+        if (!$clientsContainer instanceof BroadcastingInterface) {
+            throw new \LogicException('Clients container does not support sendToAll().');
+        }
+        return $clientsContainer->sendToAll($data);
     }
 
     public function block()

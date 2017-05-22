@@ -32,6 +32,8 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
     const DATA_PING_PONG = 64; // reserved
     const DATA_CONTROL = 128;
 
+    const HEADER_LENGTH = 5;
+
     private $eventReceive;
     private $eventPong;
 
@@ -45,15 +47,17 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
         $this->eventReceive = new CallbackEventsContainer();
     }
 
-
-    public function read()
+    public function read(): bool
     {
         $data = $this->returnRead();
         if (is_null($data)) {
-            return;
+            return false;
         }
         $this->eventReceive->callEvents($data);
+        return true;
     }
+
+    private $buffer = '';
 
     /**
      * @inheritDoc
@@ -61,9 +65,17 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
     public function returnRead()
     {
         $result = null;
-        if (($data = $this->provider->read($this->provider->getMaxPacketSize(), false)) !== false) {
-            list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', substr($data, 0, 3)));
-            $data = substr($data, 3, strlen($data));
+        $readData = $this->provider->read($this->provider->getMaxPacketSize(), false);
+        if (!is_null($readData)) {
+            $this->buffer .= $readData;
+        }
+        $bufferLength = strlen($this->buffer);
+        if ($bufferLength) {
+            list($length, $flag) = array_values(unpack(
+                'Nvalue0/Cvalue1',
+                substr($this->buffer, 0, self::HEADER_LENGTH)
+            ));
+            $data = substr($this->buffer, self::HEADER_LENGTH, $length);
             if ($length > 0 && !$data) {
                 throw new ReadException('Cannot retrieve data', ReadException::ERROR_FAIL);
             } elseif (strlen($data) < $length) {
@@ -71,6 +83,13 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
                     sprintf('Not enough length: %d bytes', $length),
                     ReadException::ERROR_PROTOCOL
                 );
+            } else {
+                $offset = self::HEADER_LENGTH + $length;
+                if ($offset === $bufferLength) {
+                    $this->buffer = '';
+                } else {
+                    $this->buffer = substr($this->buffer, $offset, $bufferLength - $offset);
+                }
             }
             $result = $this->unpack($data, $flag);
         }
@@ -155,7 +174,7 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
         }
         // начиная с этого момента исходная "$data" становится "$raw"
         $length = strlen($raw);
-        if ($length - 4 >= $this->provider->getMaxPacketSize()) { // todo 65535 bytes
+        if ($length - self::HEADER_LENGTH >= $this->provider->getMaxPacketSize()) { // todo 65535 bytes
             throw new SendException('Big data size to send! I can split it\'s');
             // кто-то попытался передать более 64 КБ за раз, выдаем ошибку
             //...пока что

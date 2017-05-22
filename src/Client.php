@@ -4,6 +4,7 @@ namespace Esockets;
 
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
+use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractProtocol;
 use Esockets\base\CallbackEvent;
 use Esockets\base\ConnectorInterface;
@@ -82,14 +83,18 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface
         return $this->connection->onDisconnect($callback);
     }
 
-    public function getConnectionResource()
+    public function getConnectionResource(): AbstractConnectionResource
     {
         return $this->connection->getConnectionResource();
     }
 
-    public function read()
+    public function read(): bool
     {
-        $this->protocol->read();
+        $read = false;
+        while ($this->protocol->read()) {
+            $read = true;
+        };
+        return $read;
     }
 
     public function returnRead()

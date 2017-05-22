@@ -28,11 +28,13 @@ final class Dummy extends AbstractProtocol
     /**
      * @inheritdoc
      */
-    public function read()
+    public function read(): bool
     {
         if (null !== ($data = $this->provider->read($this->provider->getMaxPacketSize(), false))) {
             $this->eventReceive->callEvents($data);
+            return true;
         }
+        return false;
     }
 
     /**

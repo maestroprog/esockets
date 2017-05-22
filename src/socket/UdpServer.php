@@ -3,6 +3,7 @@
 namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
+use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEvent;
@@ -10,8 +11,9 @@ use Esockets\base\CallbackEventsContainer;
 use Esockets\base\ClientsContainerInterface;
 use Esockets\base\exception\ConnectionException;
 use Esockets\base\exception\ReadException;
+use Esockets\base\HasClientsContainer;
 
-final class UdpServer extends AbstractServer implements BlockingInterface
+final class UdpServer extends AbstractServer implements BlockingInterface, HasClientsContainer
 {
     use SocketTrait;
 
@@ -20,6 +22,10 @@ final class UdpServer extends AbstractServer implements BlockingInterface
      */
     private $listenAddress;
     private $socket;
+    /**
+     * @var SocketConnectionResource|AbstractConnectionResource
+     */
+    private $connectionResource;
     private $connected = false;
 
     private $errorHandler;
@@ -49,6 +55,7 @@ final class UdpServer extends AbstractServer implements BlockingInterface
             $this->errorHandler->setSocket($this->socket);
         }
         socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
+        $this->connectionResource = new SocketConnectionResource($this->socket);
     }
 
     /**
@@ -79,7 +86,7 @@ final class UdpServer extends AbstractServer implements BlockingInterface
             $this->eventConnect->callEvents();
         }
 
-        //$this->unblock();
+        $this->unblock();
     }
 
     public function onConnect(callable $callback): CallbackEvent
@@ -127,9 +134,17 @@ final class UdpServer extends AbstractServer implements BlockingInterface
     /**
      * @inheritDoc
      */
-    public function getConnectionResource()
+    public function getConnectionResource(): AbstractConnectionResource
     {
         return $this->socket;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getClientsContainer(): ClientsContainerInterface
+    {
+        return $this->clientsContainer;
     }
 
     public function find()
@@ -144,19 +159,39 @@ final class UdpServer extends AbstractServer implements BlockingInterface
         } elseif ($bytes === 0) {
             throw new ReadException('0 bytes read from udp socket.', ReadException::ERROR_EMPTY);
         }
+
         if ($this->isIpAddress()) {
             $clientAddress = new Ipv4Address($address, $port);
         } else {
             $clientAddress = new UnixAddress($address);
         }
+
         if (!$this->clientsContainer->existsByAddress($clientAddress)) {
-            $this->eventFound->callEvents($this->socket, $clientAddress);
+            $this->eventFound->callEvents(new VirtualUdpConnection(
+                $this->socketDomain,
+                new SocketConnectionResource(
+                    $this->socket
+                ),
+                $clientAddress,
+                []
+            ));
+        } elseif (!($bytes === 1 && $buffer == 1)) {
+            $client = $this->clientsContainer->getByAddress($clientAddress);
+            $connectionResource = $client->getConnectionResource();
+            if (!$connectionResource instanceof VirtualUdpConnection) {
+                throw new \LogicException('Unknown connection resource.');
+            }
+            $connectionResource->addToBuffer($buffer);
         }
-        $client = $this->clientsContainer->getByAddress($address);
-        if (!$client instanceof UdpClient) {
-            throw new \LogicException('Invalid client type: ' . get_class($client));
+        foreach ($this->clientsContainer->list() as $client) {
+            $connectionResource = $client->getConnectionResource();
+            if (!$connectionResource instanceof VirtualUdpConnection) {
+                throw new \LogicException('Unknown connection resource.');
+            }
+            if ($connectionResource->getBufferLength() > 0) {
+                $client->read();
+            }
         }
-        $client->
     }
 
     public function onFound(callable $callback): CallbackEvent

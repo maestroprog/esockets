@@ -119,6 +119,7 @@ final class SocketErrorHandler
             case 0:
             case SOCKET_EWOULDBLOCK: // операции на незаблокированном сокет
             case SOCKET_EMSGSIZE:
+            case SOCKET_ECONNRESET:
                 // ничего не делаем.
                 break;
             case SOCKET_EADDRINUSE: // если адрес используется,

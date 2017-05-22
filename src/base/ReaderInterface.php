@@ -13,13 +13,18 @@ use Esockets\base\exception\ReadException;
 interface ReaderInterface
 {
     /**
-     * It reads the data as they become available,
+     * It reads all the data as they become available,
      * and it calls the handler assigned in @see self::onReceive.
      *
-     * @return mixed|void
+     * Он считывает все данные по мере их появления,
+     * И вызывает обработчик, назначенный в @see self::onReceive.
+     *
+     * Вернёт true, если удалось прочитать пакет данных, и false, если не удалось.
+     *
+     * @return bool
      * @throws ReadException
      */
-    public function read();
+    public function read(): bool;
 
     /**
      * Read and returns the read data.

@@ -47,7 +47,7 @@ final class TcpClient extends AbstractSocketClient
                 switch ($errorType) {
 
                     case SocketErrorHandler::ERROR_NOTHING:
-                        if (PHP_OS !== 'WINNT' || $data === '') {
+                        if ((PHP_OS !== 'WINNT' || $data === '') && $this->isConnected()) {
                             $this->disconnect();
                         }
                         return null;
@@ -100,7 +100,7 @@ final class TcpClient extends AbstractSocketClient
         $length = strlen($data);
         $written = 0;
         do {
-            $wrote = socket_write($this->socket, $data);
+            $wrote = socket_send($this->socket, $data, $length, 0);
             /**
              * @TODO как и при чтении, необходимо протестировать работу socket_write
              * Промоделировать ситуацию, когда удаленный сокет отключился, и выяснить, что выдает socket_write

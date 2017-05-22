@@ -3,6 +3,7 @@
 namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
+use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEvent;
@@ -27,6 +28,10 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
      */
     private $listenAddress;
     private $socket;
+    /**
+     * @var SocketConnectionResource|AbstractConnectionResource
+     */
+    private $connectionResource;
     private $connected = false;
     private $errorHandler;
     private $clientsContainer;
@@ -55,6 +60,7 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
             $this->errorHandler->setSocket($this->socket);
         }
         socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
+        $this->connectionResource = new SocketConnectionResource($this->socket);
     }
 
     public function connect(AbstractAddress $listenAddress)
@@ -141,9 +147,9 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     /**
      * @inheritDoc
      */
-    public function getConnectionResource()
+    public function getConnectionResource(): AbstractConnectionResource
     {
-        return $this->socket;
+        return $this->connectionResource;
     }
 
     /**
@@ -157,7 +163,7 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     public function find()
     {
         if ($connection = socket_accept($this->socket)) {
-            $this->eventFound->callEvents($connection);
+            $this->eventFound->callEvents(new SocketConnectionResource($connection));
         }
 
         /**
@@ -165,17 +171,19 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
          */
         $connectionsIndex = [];
         $connections = array_map(function (Client $client) use (&$connectionsIndex) {
-            $resource = $client->getConnectionResource();
+            $resource = $client->getConnectionResource()->getResource();
             $connectionsIndex[(int)$resource] = $client;
             return $resource;
         }, $this->clientsContainer->list());
         $write = $except = [];
-
+        $connections[-1] = $this->socket;
         if (false === ($changed = socket_select($connections, $write, $except, 1))) {
             $this->errorHandler->handleError();
         } elseif ($changed > 0) {
-            foreach ($connections as $readConnection) {
-                $connectionsIndex[(int)$readConnection]->read();
+            foreach ($connections as $idx => $readConnection) {
+                if ($idx > -1) {
+                    $connectionsIndex[(int)$readConnection]->read();
+                }
             }
             foreach ($write as $writeConnection) {
                 // todo ?
@@ -203,7 +211,8 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         if (false === ($rc = socket_select($sockets, $write, $except, null))) {
             throw new \Exception('socket_select failed!');
         }
-    }*/
+    }
+    */
 
     public function block()
     {

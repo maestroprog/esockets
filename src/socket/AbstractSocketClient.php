@@ -4,6 +4,7 @@ namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
+use Esockets\base\AbstractConnectionResource;
 use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEvent;
 use Esockets\base\CallbackEventsContainer;
@@ -16,6 +17,7 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     protected $socketDomain;
     protected $socket;
     protected $connected = false;
+    protected $connectionResource;
     /**
      * @var Ipv4Address|UnixAddress
      */
@@ -51,33 +53,23 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     /**
      * @param int $socketDomain
      * @param SocketErrorHandler $errorHandler
-     * @param $socket
-     * @param $peerAddress AbstractAddress
+     * @param AbstractConnectionResource $connectionResource
      * @return AbstractSocketClient
-     * @throws ConnectionException
+     * @throws ConnectionException|\LogicException
      */
     public static function createConnected(
         int $socketDomain,
         SocketErrorHandler $errorHandler,
-        $socket = null,
-        AbstractAddress $peerAddress = null
+        AbstractConnectionResource $connectionResource = null
     ): self
     {
-        if (!is_null($socket)) {
-            if (!is_resource($socket)) {
-                throw new ConnectionException('Socket don\'t is resource');
-            } elseif (get_resource_type($socket) !== 'Socket') {
-                throw new ConnectionException('Unknown resource type: ' . get_resource_type($socket));
-            }
-        }
-        return new static($socketDomain, $errorHandler, $socket, $peerAddress);
+        return new static($socketDomain, $errorHandler, $connectionResource);
     }
 
     final private function __construct(
         int $socketDomain,
         SocketErrorHandler $errorHandler,
-        $socket = null,
-        AbstractAddress $peerAddress = null
+        AbstractConnectionResource $connectionResource = null
     )
     {
         $this->socketDomain = $socketDomain;
@@ -86,7 +78,7 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
         $this->eventConnect = new CallbackEventsContainer();
         $this->eventDisconnect = new CallbackEventsContainer();
 
-        if (is_null($socket)) {
+        if (is_null($connectionResource)) {
             switch (get_class($this)) {
                 case TcpClient::class:
                     $type = SOCK_STREAM;
@@ -104,20 +96,36 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
             } else {
                 $this->errorHandler->setSocket($this->socket);
             }
+            $this->connectionResource = new SocketConnectionResource($this->socket);
         } else {
-            if (!is_resource($socket)) {
-                throw new ConnectionException('Socket don\'t is resource');
-            } elseif (get_resource_type($socket) !== 'Socket') {
-                throw new ConnectionException('Unknown resource type: ' . get_resource_type($socket));
+            if (get_class($this) === UdpClient::class && !$connectionResource instanceof VirtualUdpConnection) {
+                throw new \LogicException(
+                    'Unknown connection: ' . get_class($connectionResource) . '; this is not supported.'
+                );
             }
-            $this->socket = $socket;
+            $this->connectionResource = $connectionResource;
+            $this->socket = $connectionResource->getResource();
             $this->connected = true;
             $this->errorHandler->setSocket($this->socket);
-            $this->serverAddress = $peerAddress;
+            if (method_exists($connectionResource, 'getPeerAddress')) {
+                $this->serverAddress = $connectionResource->getPeerAddress();
+            } else {
+                $address = $port = null;
+                if (!socket_getpeername($this->socket, $address, $port)) {
+                    $this->errorHandler->handleError();
+                }
+                if ($this->isUnixAddress()) {
+                    $this->serverAddress = new UnixAddress($address);
+                } else {
+                    $this->serverAddress = new Ipv4Address($address, $port);
+                }
+            }
         }
         if (get_class($this) === TcpClient::class) {
-            socket_setopt($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
-            socket_setopt($this->socket, SOL_SOCKET, TCP_NODELAY, 1);
+            socket_set_option($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
+//            socket_set_option($this->socket, SOL_SOCKET, SO_DEBUG, 1);
+//            socket_set_option($this->socket, SOL_TCP, TCP_NODELAY, 1);
+            var_dump(socket_get_option($this->socket, SOL_TCP, TCP_NODELAY));
         }
     }
 
@@ -152,9 +160,9 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     /**
      * @inheritDoc
      */
-    public function getConnectionResource()
+    public function getConnectionResource(): AbstractConnectionResource
     {
-        return $this->socket;
+        return $this->connectionResource;
     }
 
     public function reconnect(): bool

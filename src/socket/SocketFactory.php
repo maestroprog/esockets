@@ -4,6 +4,7 @@ namespace Esockets\socket;
 
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
+use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\AbstractConnectionFactory;
 use Esockets\base\exception\ConnectionFactoryException;
@@ -92,7 +93,7 @@ final class SocketFactory extends AbstractConnectionFactory
         return $client;
     }
 
-    public function makePeer($connectionResource, AbstractAddress $peerAddress = null): AbstractClient
+    public function makePeer(AbstractConnectionResource $connectionResource): AbstractClient
     {
         if ($this->socket_protocol === SOL_TCP) {
             $peer = TcpClient::createConnected($this->socket_domain, $this->makeErrorHandler(), $connectionResource);
@@ -100,7 +101,7 @@ final class SocketFactory extends AbstractConnectionFactory
             $peer = UdpClient::createConnected(
                 $this->socket_domain,
                 $this->makeErrorHandler(),
-                $connectionResource, $peerAddress
+                $connectionResource
             );
         } else {
             throw new \LogicException('An attempt to use an unknown protocol.');

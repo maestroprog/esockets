@@ -1,17 +1,26 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 18.10.16
- * Time: 20:41
- */
 
 namespace Esockets\protocol;
 
-use Esockets\protocol\base\UseIO;
-use Esockets\debug\Log;
+use Esockets\base\CallbackEvent;
+use Esockets\base\CallbackEventsContainer;
+use Esockets\base\exception\ReadException;
+use Esockets\base\exception\SendException;
+use Esockets\base\IoAwareInterface;
+use Esockets\base\PingSupportInterface;
+use Esockets\base\PingPacket;
+use Esockets\base\AbstractProtocol;
 
-class Easy extends UseIO
+/**
+ * Протокол-обёртка над php-шными структурами данных,
+ * передаваемых по сети.
+ * В задачи данного протокола входит:
+ *  - сериализация (json-изация) отправляемых структур данных
+ *  - партицирование получившихся сериализованных данных todo
+ *  - нумерация получившихся партиций, и их сборка после получения (только для UDP) todo
+ *  - десериализация полученных на другой стороне данных.
+ */
+final class Easy extends AbstractProtocol implements PingSupportInterface
 {
     const DATA_RAW = 0;
     const DATA_JSON = 1;
@@ -23,30 +32,69 @@ class Easy extends UseIO
     const DATA_PING_PONG = 64; // reserved
     const DATA_CONTROL = 128;
 
-    public function read(bool $need = false)
+    const HEADER_LENGTH = 5;
+
+    private $eventPong;
+
+    /**
+     * @inheritDoc
+     */
+    public function __construct(IoAwareInterface $provider)
     {
-        // read message meta
-        if (($data = $this->provider->read(5)) !== false) {
-            list($length, $flag) = array_values(unpack('Nvalue0/Cvalue1', $data));
-            if ($length > 0) {
-                if (($data = $this->provider->read($length, true)) !== false) {
+        parent::__construct($provider);
+    }
 
-                } else {
-                    throw new \Exception('Cannot retrieve data');
-                }
-            } else {
-                throw new \Exception(sprintf('Not enough length: %d bytes', $length));
-            }
+    private $buffer = '';
 
-            return $this->unpack($data, $flag);
+    /**
+     * @inheritDoc
+     */
+    public function returnRead()
+    {
+        $result = null;
+        $readData = $this->provider->read($this->provider->getMaxPacketSize(), false);
+        if (!is_null($readData)) {
+            $this->buffer .= $readData;
         }
-        return false;
+        $bufferLength = strlen($this->buffer);
+        if ($bufferLength) {
+            list($length, $flag) = array_values(unpack(
+                'Nvalue0/Cvalue1',
+                substr($this->buffer, 0, self::HEADER_LENGTH)
+            ));
+            $data = substr($this->buffer, self::HEADER_LENGTH, $length);
+            if ($length > 0 && !$data) {
+                throw new ReadException('Cannot retrieve data', ReadException::ERROR_FAIL);
+            } elseif (strlen($data) < $length) {
+                throw new ReadException(
+                    sprintf('Not enough length: %d bytes', $length),
+                    ReadException::ERROR_PROTOCOL
+                );
+            } else {
+                $offset = self::HEADER_LENGTH + $length;
+                if ($offset === $bufferLength) {
+                    $this->buffer = '';
+                } else {
+                    $this->buffer = substr($this->buffer, $offset, $bufferLength - $offset);
+                }
+            }
+            $result = $this->unpack($data, $flag);
+        }
+        return $result;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onReceive(callable $callback): CallbackEvent
+    {
+        return $this->eventReceive->addEvent(CallbackEvent::create($callback));
     }
 
     /**
      * @inheritdoc
      */
-    public function send(&$data): bool
+    public function send($data): bool
     {
         if ($raw = $this->pack($data)) {
             return $this->provider->send($raw);
@@ -54,14 +102,28 @@ class Easy extends UseIO
         return false;
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function ping(PingPacket $pingPacket)
+    {
+        $this->send($pingPacket);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function pong(callable $pongReceived)
+    {
+        $this->eventPong = $pongReceived;
+    }
+
     private function pack(&$data): string
     {
         $flag = 0;
         switch (gettype($data)) {
             case 'boolean':
-                trigger_error('Boolean data type cannot be transmitted', E_USER_WARNING);
-                return false;
-                break;
+                throw new SendException('Boolean data type cannot be transmitted.');
             case 'integer':
                 $flag = self::DATA_INT;
                 break;
@@ -72,36 +134,37 @@ class Easy extends UseIO
                 $flag = self::DATA_ARRAY | self::DATA_JSON;
                 break;
             case 'object':
-                $flag = self::DATA_EXTENDED | self::DATA_JSON;
-                trigger_error('Values of type Object cannot be transmitted on current Net version', E_USER_WARNING);
-                return false;
+                if ($data instanceof PingPacket) {
+                    $flag = self::DATA_INT | self::DATA_PING_PONG;
+                    if (!$data->isResponse()) {
+                        $flag |= self::DATA_CONTROL;
+                    }
+                    $data = $data->getValue();
+                } else {
+                    //$flag = self::DATA_EXTENDED | self::DATA_JSON;
+                    throw new SendException('Values of type Object cannot be transmitted on current Net version.');
+                }
                 break;
             case 'resource':
-                trigger_error('Values of type Resource cannot be transmitted on current Net version', E_USER_WARNING);
-                return false;
-                break;
+                throw new SendException('Values of type Resource cannot be transmitted on current Net version.');
             case 'NULL':
-                trigger_error('Null data type cannot be transmitted', E_USER_WARNING);
-                return false;
-                break;
+                throw new SendException('Null data type cannot be transmitted.');
             case 'unknown type':
-                trigger_error('Values of Unknown type cannot be transmitted on current Net version', E_USER_WARNING);
-                return false;
-                break;
+                throw new SendException('Values of Unknown type cannot be transmitted on current Net version.');
             default:
                 $flag |= self::DATA_STRING;
         }
-        if ($flag & self::DATA_JSON)
+        if ($flag & self::DATA_JSON) {
             $raw = json_encode($data);
-        else
+        } else {
             $raw = $data;
+        }
         // начиная с этого момента исходная "$data" становится "$raw"
         $length = strlen($raw);
-        if ($length >= 0xffff) { // 65535 bytes
-            trigger_error('Big data size to send! I can split it\'s', E_USER_ERROR);
+        if ($length - self::HEADER_LENGTH >= $this->provider->getMaxPacketSize()) { // todo 65535 bytes
+            throw new SendException('Big data size to send! I can split it\'s');
             // кто-то попытался передать более 64 КБ за раз, выдаем ошибку
             //...пока что
-            return false;
         } else {
             $length = strlen($raw);
             $raw = pack('NCa*', $length, $flag, $raw);
@@ -110,10 +173,9 @@ class Easy extends UseIO
     }
 
     /**
-     * Ф-я распаковывает принятые из сокета данные.
+     * Распаковывает принятые из сокета данные.
      * Возвращает false если распаковка не удалась,
-     *      null если данные не были распакованы по неизвестным причинам
-     *      todo PingMessage
+     * null если данные не были распакованы по неизвестным причинам.
      *
      * @param string $raw
      * @param int $flag
@@ -131,25 +193,16 @@ class Easy extends UseIO
         } else {
             $data = $raw; // simple string
         }
-        /*
-         * todo раскомминтировать и перепилить
-         * @see "todo PingMessage"
-         * if ($flag & self::DATA_CONTROL) {
-            // control message parser
-            // @TODO
-            if ($flag & self::DATA_PING_PONG) {
-                if (is_callable($this->event_pong)) {
-                    call_user_func($this->event_pong, $raw);
-                } else {
-                    Log::log('pong received');
-                }
+
+        if ($flag & self::DATA_PING_PONG) {
+            if ($flag & self::DATA_CONTROL) {
+                $data = PingPacket::response($data);
+                $this->send($data);
+                return null;
+            } else {
+                return PingPacket::request($data);
             }
-        } elseif ($flag & self::DATA_PING_PONG) {
-            // отправляем исходные данные "pong" с исходным форматом, дополнительно устанавливая флаг DATA_CONTROL
-            $this->_send($raw, $flag | self::DATA_CONTROL);
-            Log::log('ping received and pong sended');
-            return;
-        }*/
+        }
         return $data;
     }
 }

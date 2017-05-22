@@ -1,12 +1,5 @@
 <?php
 
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 20.10.16
- * Time: 20:45
- */
-
 namespace Esockets\debug;
 
 final class Log
@@ -18,7 +11,13 @@ final class Log
         if (self::$env) {
             $message = sprintf('{%s} [%s]: %s', self::$env, date('H:i:s'), $message);
         }
-        if (PHP_SAPI === 'cli') {
+        if (PHP_OS === 'WINNT') {
+            if (ini_get('log_errors')) {
+                error_log($message);
+            } else {
+                echo $message . '<br>' . PHP_EOL;
+            }
+        } elseif (PHP_SAPI === 'cli') {
             fputs(STDERR, $message . PHP_EOL);
         } else {
             if (ini_get('log_errors')) {

@@ -17,11 +17,21 @@
     }
   ],
   "require": {
-    "php": ">=7.0.0"
+    "php": ">=7.0.0",
+    "maestroprog/workmanager": "*"
   },
   "autoload": {
     "psr-4": {
       "Esockets\\": "src"
     }
-  }
+  },
+  "require-dev": {
+    "phpunit/phpunit" : "*"
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/maestroprog/workmanager"
+    }
+  ]
 }

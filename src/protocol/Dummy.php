@@ -1,30 +1,69 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Руслан
- * Date: 15.10.2016
- * Time: 19:24
- */
 
 namespace Esockets\protocol;
 
-use Esockets\protocol\base\UseIO;
+use Esockets\base\AbstractProtocol;
+use Esockets\base\CallbackEvent;
+use Esockets\base\CallbackEventsContainer;
+use Esockets\base\IoAwareInterface;
 
-class Dummy extends UseIO
+/**
+ * Не-протокол, использующийся поверх TCP или UDP.
+ * Для передачи потока байт.
+ */
+final class Dummy extends AbstractProtocol
 {
+    private $eventReceive;
+
     /**
-     * @inheritdoc
+     * @inheritDoc
      */
-    function read(bool $need = false)
+    public function __construct(IoAwareInterface $provider)
     {
-        return $this->provider->read(0, $need);
+        parent::__construct($provider);
+
+        $this->eventReceive = new CallbackEventsContainer();
     }
 
     /**
      * @inheritdoc
      */
-    function send(&$data): bool
+    public function read(): bool
     {
+        if (null !== ($data = $this->provider->read($this->provider->getMaxPacketSize(), false))) {
+            $this->eventReceive->callEvents($data);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function send($data): bool
+    {
+        if (strlen($data) > $this->provider->getMaxPacketSize()) {
+            $packets = str_split($data, $this->provider->getMaxPacketSize());
+            array_walk($packets, function (string $packet) {
+                $this->provider->send($packet);
+            });
+        }
         return $this->provider->send($data);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function returnRead()
+    {
+        return $this->provider->read($this->provider->getMaxPacketSize(), false);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onReceive(callable $callback): CallbackEvent
+    {
+        return $this->eventReceive->addEvent(CallbackEvent::create($callback));
     }
 }

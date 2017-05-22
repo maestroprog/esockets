@@ -1,12 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 31.05.2016
- * Time: 21:26
- */
 
 namespace Esockets;
+
 
 class TestEsockets extends \PHPUnit_Framework_TestCase
 {

@@ -4,8 +4,8 @@ namespace Esockets;
 
 use Esockets\base\AbstractAddress;
 use Esockets\base\BroadcastingInterface;
-use Esockets\base\CallbackEvent;
-use Esockets\base\CallbackEventsContainer;
+use Esockets\base\CallbackEventListener;
+use Esockets\base\Event;
 use Esockets\base\ClientsContainerInterface;
 
 /**
@@ -24,9 +24,12 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
 
     public function __construct()
     {
-        $this->eventDisconnectAll = new CallbackEventsContainer();
+        $this->eventDisconnectAll = new Event();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function add(Client $client)
     {
         $this->clients[$client->getPeerAddress()->__toString()] = $client;
@@ -35,6 +38,9 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
         });
     }
 
+    /**
+     * @inheritdoc
+     */
     public function remove(Client $client)
     {
         $key = $client->getPeerAddress()->__toString();
@@ -43,12 +49,12 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
         }
         unset($this->clients[$key]);
         if (count($this->clients) === 0) {
-            $this->eventDisconnectAll->callEvents();
+            $this->eventDisconnectAll->call();
         }
     }
 
     /**
-     * @return Client[]
+     * @inheritdoc
      */
     public function list(): array
     {
@@ -56,16 +62,15 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function exists(Client $client): bool
     {
-        // TODO: Implement exists() method.
-        throw new \BadMethodCallException('Todo: implement this method.');
+        return $this->existsByAddress($client->getClientAddress());
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function existsByAddress(AbstractAddress $address): bool
     {
@@ -73,7 +78,7 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function getByAddress(AbstractAddress $address): Client
     {
@@ -83,7 +88,9 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
         return $this->clients[$address->__toString()];
     }
 
-
+    /**
+     * @inheritdoc
+     */
     public function disconnectAll()
     {
         array_walk($this->clients, function (Client $client) {
@@ -91,13 +98,16 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
         });
     }
 
-    public function onDisconnectAll(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onDisconnectAll(callable $callback): CallbackEventListener
     {
-        return $this->eventDisconnectAll->addEvent(CallbackEvent::create($callback));
+        return $this->eventDisconnectAll->attachCallbackListener($callback);
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function sendToAll($data): bool
     {

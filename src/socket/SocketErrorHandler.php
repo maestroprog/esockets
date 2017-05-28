@@ -5,13 +5,20 @@ namespace Esockets\socket;
 use Esockets\base\exception\ConnectionException;
 use Esockets\debug\Log;
 
+/**
+ * Общий обработчик ошибок, возникающих при работе с сокетами.
+ * Выполняет две функции: определение деструктивной степени ошибки,
+ * и выброс исключения @see ConnectionException в случае возникновения серьезной ошибки.
+ *
+ * Для каждого объекта с подключением создается собственный объект handler-а...
+ */
 final class SocketErrorHandler
 {
     /** Константы внутренних ошибок. */
     const ERROR_NOTHING = 0;    // нет ошибки
     const ERROR_AGAIN = 1;      // ошибка, просьба повторить операцию
     const ERROR_SKIP = 2;       // ошибка, просьба пропустить операцию
-    const ERROR_FATAL = 4;      // фатальная ошибка
+    const ERROR_DISCONNECTED = 4;      // фатальная ошибка
     const ERROR_UNKNOWN = 8;    // неизвестная необрабатываемая ошибка
 
     /**
@@ -25,10 +32,10 @@ final class SocketErrorHandler
         'SOCKET_EMSGSIZE' => self::ERROR_NOTHING,
         'SOCKET_EAGAIN' => self::ERROR_AGAIN,
         'SOCKET_TRY_AGAIN' => self::ERROR_AGAIN,
-        'SOCKET_EPIPE' => self::ERROR_FATAL,
-        'SOCKET_ENOTCONN' => self::ERROR_FATAL,
-        'SOCKET_ECONNABORTED' => self::ERROR_FATAL,
-        'SOCKET_ECONNRESET' => self::ERROR_FATAL,
+        'SOCKET_EPIPE' => self::ERROR_DISCONNECTED,
+        'SOCKET_ENOTCONN' => self::ERROR_DISCONNECTED,
+        'SOCKET_ECONNABORTED' => self::ERROR_DISCONNECTED,
+        'SOCKET_ECONNRESET' => self::ERROR_DISCONNECTED,
     ];
 
     private $socket;
@@ -81,7 +88,7 @@ final class SocketErrorHandler
      * @param int $operation
      * @return int
      */
-    public function getErrorType(int $errno, int $operation): int
+    public function getErrorLevel(int $errno, int $operation): int
     {
         if ($errno === 0) {
             return self::ERROR_NOTHING;

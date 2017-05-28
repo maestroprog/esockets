@@ -6,13 +6,20 @@ use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
 use Esockets\base\AbstractConnectionResource;
 use Esockets\base\BlockingInterface;
-use Esockets\base\CallbackEvent;
-use Esockets\base\CallbackEventsContainer;
+use Esockets\base\CallbackEventListener;
+use Esockets\base\Event;
 use Esockets\base\exception\ConnectionException;
 
 abstract class AbstractSocketClient extends AbstractClient implements BlockingInterface
 {
     use SocketTrait;
+
+    /** Интервал времени ожидания между попытками при чтении/записи. */
+    const SOCKET_WAIT = 10;
+
+    /** Константы операций ввода/вывода. */
+    const OP_READ = 0;
+    const OP_WRITE = 1;
 
     protected $socketDomain;
     protected $socket;
@@ -23,8 +30,8 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
      */
     protected $serverAddress;
     protected $clientAddress;
-    protected $errorHandler;
 
+    protected $errorHandler;
     protected $eventConnect;
     protected $eventDisconnect;
 
@@ -33,14 +40,9 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     protected $transmittedBytes = 0;
     protected $transmittedPackets = 0;
 
-    /** Интервал времени ожидания между попытками при чтении/записи. */
-    const SOCKET_WAIT = 1;
-
-    /** Константы операций ввода/вывода. */
-    const OP_READ = 0;
-    const OP_WRITE = 1;
-
     /**
+     * Создаёт объект с подготовленным для подключения сокетом.
+     *
      * @param int $socketDomain
      * @param SocketErrorHandler $errorHandler
      * @return AbstractSocketClient
@@ -51,6 +53,8 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     }
 
     /**
+     * Создает объект с подключенным сокетом.
+     *
      * @param int $socketDomain
      * @param SocketErrorHandler $errorHandler
      * @param AbstractConnectionResource $connectionResource
@@ -66,6 +70,13 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
         return new static($socketDomain, $errorHandler, $connectionResource);
     }
 
+    /**
+     * Приватный конструктор.
+     *
+     * @param int $socketDomain
+     * @param SocketErrorHandler $errorHandler
+     * @param AbstractConnectionResource|null $connectionResource
+     */
     final private function __construct(
         int $socketDomain,
         SocketErrorHandler $errorHandler,
@@ -75,28 +86,11 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
         $this->socketDomain = $socketDomain;
         $this->errorHandler = $errorHandler;
 
-        $this->eventConnect = new CallbackEventsContainer();
-        $this->eventDisconnect = new CallbackEventsContainer();
+        $this->eventConnect = new Event();
+        $this->eventDisconnect = new Event();
 
         if (is_null($connectionResource)) {
-            switch (get_class($this)) {
-                case TcpClient::class:
-                    $type = SOCK_STREAM;
-                    $protocol = SOL_TCP;
-                    break;
-                case UdpClient::class:
-                    $type = SOCK_DGRAM;
-                    $protocol = SOL_UDP;
-                    break;
-                default:
-                    throw new \LogicException('Other protocols not supported.');
-            }
-            if (!($this->socket = socket_create($socketDomain, $type, $protocol))) {
-                $this->errorHandler->handleError();
-            } else {
-                $this->errorHandler->setSocket($this->socket);
-            }
-            $this->connectionResource = new SocketConnectionResource($this->socket);
+            $this->createSocket();
         } else {
             if (get_class($this) === UdpClient::class && !$connectionResource instanceof VirtualUdpConnection) {
                 throw new \LogicException(
@@ -122,12 +116,43 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
             }
         }
         if (get_class($this) === TcpClient::class) {
-//            socket_set_option($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
-//            socket_set_option($this->socket, SOL_SOCKET, SO_DEBUG, 1);
-//            socket_set_option($this->socket, SOL_TCP, TCP_NODELAY, 1);
+            socket_set_option($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
+            socket_set_option($this->socket, SOL_TCP, TCP_NODELAY, 1);
         }
     }
 
+    /**
+     * Создаёт сокет.
+     */
+    protected function createSocket()
+    {
+        $this->receivedBytes = 0;
+        $this->receivedPackets = 0;
+        $this->transmittedBytes = 0;
+        $this->transmittedPackets = 0;
+        switch (get_class($this)) {
+            case TcpClient::class:
+                $type = SOCK_STREAM;
+                $protocol = SOL_TCP;
+                break;
+            case UdpClient::class:
+                $type = SOCK_DGRAM;
+                $protocol = SOL_UDP;
+                break;
+            default:
+                throw new \LogicException('Other protocols not supported.');
+        }
+        if (!($this->socket = socket_create($this->socketDomain, $type, $protocol))) {
+            $this->errorHandler->handleError();
+        } else {
+            $this->errorHandler->setSocket($this->socket);
+        }
+        $this->connectionResource = new SocketConnectionResource($this->socket);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function getPeerAddress(): AbstractAddress
     {
         if (is_null($this->serverAddress) || !($this->serverAddress instanceof AbstractAddress)) {
@@ -142,6 +167,9 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
         return $this->serverAddress;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getClientAddress(): AbstractAddress
     {
         if (is_null($this->clientAddress) || !($this->clientAddress instanceof AbstractAddress)) {
@@ -157,13 +185,16 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function getConnectionResource(): AbstractConnectionResource
     {
         return $this->connectionResource;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function reconnect(): bool
     {
         $this->disconnect();
@@ -175,110 +206,92 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
         return true;
     }
 
-    public function onConnect(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onConnect(callable $callback): CallbackEventListener
     {
-        return $this->eventConnect->addEvent(CallbackEvent::create($callback));
+        return $this->eventConnect->attachCallbackListener($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isConnected(): bool
     {
         return $this->connected;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function disconnect()
     {
         if (!$this->connected || !is_resource($this->socket) || get_resource_type($this->socket) !== 'Socket') {
-            throw new \LogicException('Socket already is disconnected.');
+            return;
         }
         $this->connected = false;
-        $this->eventDisconnect->callEvents();
+        $this->eventDisconnect->call();
         $this->block(); // блокируем сокет перед его закрытием
         socket_shutdown($this->socket);
         socket_close($this->socket);
     }
 
-    public function onDisconnect(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onDisconnect(callable $callback): CallbackEventListener
     {
-        return $this->eventDisconnect->addEvent(CallbackEvent::create($callback));
+        return $this->eventDisconnect->attachCallbackListener($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function block()
     {
         socket_set_block($this->socket);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function unblock()
     {
         socket_set_nonblock($this->socket);
     }
 
-    public function getMaxPacketSize(): int
-    {
-        return 1500; // MTU
-    }
-
+    /**
+     * @inheritdoc
+     */
     public function getReceivedBytesCount(): int
     {
         return $this->receivedBytes;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getReceivedPacketCount(): int
     {
         return $this->receivedPackets;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getTransmittedBytesCount(): int
     {
         return $this->transmittedBytes;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getTransmittedPacketCount(): int
     {
         return $this->transmittedPackets;
     }
-
-    /**
-     * Поддерживает жизнь соединения.
-     * Что делает:
-     * - контролирует текущее состояние соединения,
-     * - проверяет связь с заданным интервалом,
-     * - выполняет чтение входящих данных,
-     * - выполняет переподключение при обрыве связи, если это включено,
-     *
-     * Возвращает true, если сокет жив, false если не работает.
-     * Можно использовать в бесконечном цикле:
-     * while ($NET->live()) {
-     *     // тут делаем что-то.
-     * }
-     *
-     * @return bool
-     *
-     * public function live()
-     * {
-     * // TODO: Implement live() method.
-     * }
-     */
-    /*
-        public function ping()
-        {
-            $ping = PingPacket::request(rand(1000, 9999));
-            $this->eventPong = function (PingPacket $msg) use ($ping) {
-                if ($msg->getValue() !== $ping->getValue()) {
-                    throw new \Exception('Incorrect ping data');
-                } else {
-                    $this->setTime(self::LIVE_LAST_PING);
-                }
-                $this->eventPong;
-            };
-            $this->send($ping);
-            unset($ping);
-        }
-
-        public function pong(PingPacket $pingData)
-        {
-            // TODO: Implement pong() method.
-        }*/
-
 
     final private function __clone()
     {

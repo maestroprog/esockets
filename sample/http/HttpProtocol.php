@@ -1,7 +1,7 @@
 <?php
 
 use Esockets\base\AbstractProtocol;
-use Esockets\base\CallbackEvent;
+use Esockets\base\CallbackEventListener;
 
 final class HttpProtocol extends AbstractProtocol
 {
@@ -12,11 +12,7 @@ final class HttpProtocol extends AbstractProtocol
     {
         $buffer = '';
         $read = false;
-        $data = $this->provider->read($this->provider->getMaxPacketSize(), false);
-        /*while (!is_null()) {
-            $buffer .= $data;
-            $read = true;
-        }*/
+        $data = $this->provider->read($this->provider->getReadBufferSize(), false);
         if (!is_null($data)) {
             $buffer .= $data;
             $read = true;
@@ -29,7 +25,14 @@ final class HttpProtocol extends AbstractProtocol
             $parsedHeaders = [];
             foreach ($headers as $header) {
                 if ($i === 0) {
-                    list($method, $requestUri, $version) = explode(' ', $header, 3);
+                    $matches = [];
+                    $uri = null;
+                    if (preg_match('/^([^\s]{1,})\s{1,}([^\s]{1,})\s{1,}([^\s]{1,})$/', trim($header), $matches)) {
+                        list($header, $method, $uri, $version) = $matches;
+                    }
+                    if ($uri) {
+                        $requestUri = $uri;
+                    }
                 } else {
                     list($header, $value) = explode(':', $header, 2);
                     $parsedHeaders[$header] = $value;
@@ -44,23 +47,15 @@ final class HttpProtocol extends AbstractProtocol
     /**
      * @inheritdoc
      */
-    public function onReceive(callable $callback): CallbackEvent
+    public function onReceive(callable $callback): CallbackEventListener
     {
-        return $this->eventReceive->addEvent(CallbackEvent::create($callback));
+        return $this->eventReceive->attachCallbackListener($callback);
     }
 
     public function send($data): bool
     {
         if ($data instanceof HttpResponse) {
-            $data = implode("\r\n", [
-                sprintf('HTTP/1.0 %d %s', $data->getCode(), $data->getStatus()),
-                'Content-Type: text/html; charset=utf-8',
-                sprintf('Content-Length: %d', strlen($data->getBody())),
-                'Connection: close',
-                '',
-                $data->getBody(),
-                ''
-            ]);
+            $data = $data->getHeaders() . "\r\n" . "\r\n" . $data->getBody();
         }
         return $this->provider->send($data);
     }

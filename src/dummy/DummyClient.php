@@ -4,15 +4,27 @@ namespace Esockets\dummy;
 
 use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractClient;
-use Esockets\base\CallbackEvent;
+use Esockets\base\AbstractConnectionResource;
+use Esockets\base\CallbackEventListener;
 use Esockets\base\IoAwareInterface;
 
 /**
  * Класс-заглушка ввода-вывода.
+ * Ничего не делает.
  */
 final class Dummy extends AbstractClient implements IoAwareInterface
 {
     private $serverAddress;
+
+    public function getReadBufferSize(): int
+    {
+        return 1;
+    }
+
+    public function getMaxPacketSizeForWriting(): int
+    {
+        return 0;
+    }
 
     public function getPeerAddress(): AbstractAddress
     {
@@ -24,9 +36,9 @@ final class Dummy extends AbstractClient implements IoAwareInterface
         return new DummyAddress();
     }
 
-    public function getConnectionResource():AbstractConnectionResource
+    public function getConnectionResource(): AbstractConnectionResource
     {
-        return null;
+        return new DummyConnectionResource();
     }
 
     public function connect(AbstractAddress $address)
@@ -34,9 +46,10 @@ final class Dummy extends AbstractClient implements IoAwareInterface
         $this->serverAddress = $address;
     }
 
-    public function onConnect(callable $callback): CallbackEvent
+    public function onConnect(callable $callback): CallbackEventListener
     {
-        return CallbackEvent::create($callback);
+        return CallbackEventListener::create(0, $callback, function () {
+        });
     }
 
     public function reconnect(): bool
@@ -54,9 +67,10 @@ final class Dummy extends AbstractClient implements IoAwareInterface
         ;
     }
 
-    public function onDisconnect(callable $callback): CallbackEvent
+    public function onDisconnect(callable $callback): CallbackEventListener
     {
-        return CallbackEvent::create($callback);
+        return CallbackEventListener::create(0, $callback, function () {
+        });
     }
 
     public function read(int $length, bool $force)

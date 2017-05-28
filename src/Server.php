@@ -7,11 +7,15 @@ use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\BroadcastingInterface;
-use Esockets\base\CallbackEvent;
-use Esockets\base\CallbackEventsContainer;
+use Esockets\base\CallbackEventListener;
+use Esockets\base\Event;
 use Esockets\base\Configurator;
 use Esockets\base\HasClientsContainer;
 
+/**
+ * Обёртка над серверным соединением.
+ * Использует конфигуратор (фабрику) для создания серверных клиентов при подключении оных.
+ */
 class Server extends AbstractServer implements
     BroadcastingInterface,
     BlockingInterface
@@ -25,55 +29,76 @@ class Server extends AbstractServer implements
     )
     {
         $this->server = $server;
-        $this->eventFound = new CallbackEventsContainer();
+        $this->eventFound = new Event();
 
         $this->server->onFound(function ($connection) use ($configurator) {
             $peer = $configurator->makePeer($connection);
             if ($this->server instanceof HasClientsContainer) {
                 $this->server->getClientsContainer()->add($peer);
             }
-            $this->eventFound->callEvents($peer);
+            $this->eventFound->call($peer);
         });
     }
 
+    /**
+     * @inheritdoc
+     */
     public function connect(AbstractAddress $address)
     {
         $this->server->connect($address);
     }
 
-    public function onConnect(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onConnect(callable $callback): CallbackEventListener
     {
         return $this->server->onConnect($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function reconnect(): bool
     {
         return $this->server->reconnect();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isConnected(): bool
     {
         return $this->server->isConnected();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function disconnect()
     {
         $this->server->disconnect();
     }
 
-    public function onDisconnect(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onDisconnect(callable $callback): CallbackEventListener
     {
         return $this->server->onDisconnect($callback);
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function getConnectionResource(): AbstractConnectionResource
     {
         return $this->server->getConnectionResource();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function disconnectAll()
     {
         if (!$this->server instanceof HasClientsContainer) {
@@ -86,7 +111,10 @@ class Server extends AbstractServer implements
         $clientsContainer->disconnectAll();
     }
 
-    public function onDisconnectAll(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onDisconnectAll(callable $callback): CallbackEventListener
     {
         if (!$this->server instanceof HasClientsContainer) {
             throw new \LogicException('Server does not have clients container.');
@@ -98,16 +126,25 @@ class Server extends AbstractServer implements
         return $clientsContainer->onDisconnectAll($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function find()
     {
         $this->server->find();
     }
 
-    public function onFound(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onFound(callable $callback): CallbackEventListener
     {
-        return $this->eventFound->addEvent(CallbackEvent::create($callback));
+        return $this->eventFound->attachCallbackListener($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function sendToAll($data): bool
     {
         if (!$this->server instanceof HasClientsContainer) {
@@ -120,6 +157,9 @@ class Server extends AbstractServer implements
         return $clientsContainer->sendToAll($data);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function block()
     {
         if ($this->server instanceof BlockingInterface) {
@@ -127,6 +167,9 @@ class Server extends AbstractServer implements
         }
     }
 
+    /**
+     * @inheritdoc
+     */
     public function unblock()
     {
         if ($this->server instanceof BlockingInterface) {

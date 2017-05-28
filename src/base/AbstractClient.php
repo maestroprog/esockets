@@ -4,6 +4,9 @@ namespace Esockets\base;
 
 abstract class AbstractClient implements ConnectorInterface, IoAwareInterface
 {
+    protected $peerAddress;
+    protected $clientAddress;
+
     /**
      * Вернет адрес пира, к которому подключени клиент.
      *

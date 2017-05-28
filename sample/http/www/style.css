@@ -1,0 +1,7 @@
+* {
+    background-color: #cecece;
+}
+
+p, p > * {
+    background-color: #aeaeae;
+}

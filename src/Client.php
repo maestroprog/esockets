@@ -7,13 +7,16 @@ use Esockets\base\AbstractClient;
 use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractProtocol;
 use Esockets\base\BlockingInterface;
-use Esockets\base\CallbackEvent;
+use Esockets\base\CallbackEventListener;
 use Esockets\base\ConnectorInterface;
 use Esockets\base\PingPacket;
 use Esockets\base\PingSupportInterface;
 use Esockets\base\ReaderInterface;
 use Esockets\base\SenderInterface;
 
+/**
+ * Враппер над связкой протокол-клиент.
+ */
 class Client implements ConnectorInterface, ReaderInterface, SenderInterface, BlockingInterface
 {
     private $connection;
@@ -34,16 +37,6 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
         $this->protocol = $protocol;
     }
 
-    public function setTimeout(int $timeout)
-    {
-        $this->timeout = $timeout;
-    }
-
-    public function setReconnectInterval(int $interval)
-    {
-        $this->reconnectInterval = $interval;
-    }
-
     public function getPeerAddress(): AbstractAddress
     {
         return $this->connection->getPeerAddress();
@@ -54,84 +47,131 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
         return $this->connection->getClientAddress();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function connect(AbstractAddress $address)
     {
         $this->connection->connect($address);
     }
 
-    public function onConnect(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onConnect(callable $callback): CallbackEventListener
     {
         return $this->connection->onConnect($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function reconnect(): bool
     {
         return $this->connection->reconnect();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isConnected(): bool
     {
         return $this->connection->isConnected();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function disconnect()
     {
         $this->connection->disconnect();
     }
 
-    public function onDisconnect(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onDisconnect(callable $callback): CallbackEventListener
     {
         return $this->connection->onDisconnect($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getConnectionResource(): AbstractConnectionResource
     {
         return $this->connection->getConnectionResource();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function read(): bool
     {
-        $read = false;
-        while ($this->isConnected() && $this->protocol->read()) {
-            $read = true;
-        }
-        return $read;
+        return $this->protocol->read();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function returnRead()
     {
         return $this->protocol->returnRead();
     }
 
-    public function onReceive(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onReceive(callable $callback): CallbackEventListener
     {
         return $this->protocol->onReceive($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function send($data): bool
     {
         return $this->protocol->send($data);
     }
 
-    protected function ping()
+    public function setTimeout(int $timeout)
     {
-        $pingRequest = PingPacket::request(mt_rand(1, 9999));
-        if ($this->protocol instanceof PingSupportInterface) {
-            $this->protocol->pong(function (PingPacket $pingResponse) use ($pingRequest) {
-                if ($pingResponse->isResponse() && $pingRequest->getValue() === $pingRequest->getValue()) {
-                    $this->setTime(self::TIME_LAST_PING);
-                } else {
-                    trigger_error(
-                        'Unknown ping response value '
-                        . $pingRequest->getValue() . ':' . $pingResponse->getValue(),
-                        E_USER_WARNING
-                    );
-                }
-            });
-            $this->protocol->ping($pingRequest);
-        } else {
-            $this->protocol->send($pingRequest);
-            throw new \LogicException('HttpProtocol ' . get_class($this->protocol) . ' has no support ping.');
+        $this->timeout = $timeout;
+    }
+
+    public function setReconnectInterval(int $interval)
+    {
+        $this->reconnectInterval = $interval;
+    }
+
+    public function getStatistic(): ClientStatistic
+    {
+        return new ClientStatistic(
+            $this->connection->getReceivedBytesCount(),
+            $this->connection->getReceivedPacketCount(),
+            $this->connection->getTransmittedBytesCount(),
+            $this->connection->getTransmittedPacketCount()
+        );
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function block()
+    {
+        if ($this->connection instanceof BlockingInterface) {
+            $this->connection->block();
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function unblock()
+    {
+        if ($this->connection instanceof BlockingInterface) {
+            $this->connection->unblock();
         }
     }
 
@@ -149,6 +189,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
      *     // тут делаем что-то.
      * }
      *
+     * todo
      * @return bool живое соединение, или не живое
      */
     public function live(): bool
@@ -174,33 +215,25 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
         return $alive;
     }
 
-    public function getStatistic(): ClientStatistic
+    protected function ping()
     {
-        return new ClientStatistic(
-            $this->connection->getReceivedBytesCount(),
-            $this->connection->getReceivedPacketCount(),
-            $this->connection->getTransmittedBytesCount(),
-            $this->connection->getTransmittedPacketCount()
-        );
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function block()
-    {
-        if ($this->connection instanceof BlockingInterface) {
-            $this->connection->block();
-        }
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function unblock()
-    {
-        if ($this->connection instanceof BlockingInterface) {
-            $this->connection->unblock();
+        $pingRequest = PingPacket::request(mt_rand(1, 9999));
+        if ($this->protocol instanceof PingSupportInterface) {
+            $this->protocol->pong(function (PingPacket $pingResponse) use ($pingRequest) {
+                if ($pingResponse->isResponse() && $pingRequest->getValue() === $pingRequest->getValue()) {
+                    $this->setTime(self::TIME_LAST_PING);
+                } else {
+                    trigger_error(
+                        'Unknown ping response value '
+                        . $pingRequest->getValue() . ':' . $pingResponse->getValue(),
+                        E_USER_WARNING
+                    );
+                }
+            });
+            $this->protocol->ping($pingRequest);
+        } else {
+            $this->protocol->send($pingRequest);
+            throw new \LogicException('HttpProtocol ' . get_class($this->protocol) . ' has no support ping.');
         }
     }
 

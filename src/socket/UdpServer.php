@@ -6,13 +6,16 @@ use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
-use Esockets\base\CallbackEvent;
-use Esockets\base\CallbackEventsContainer;
+use Esockets\base\CallbackEventListener;
+use Esockets\base\Event;
 use Esockets\base\ClientsContainerInterface;
 use Esockets\base\exception\ConnectionException;
 use Esockets\base\exception\ReadException;
 use Esockets\base\HasClientsContainer;
 
+/**
+ * Костыльная реализация UDP сервера.
+ */
 final class UdpServer extends AbstractServer implements BlockingInterface, HasClientsContainer
 {
     use SocketTrait;
@@ -45,9 +48,9 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
         $this->errorHandler = $errorHandler;
         $this->clientsContainer = $clientsContainer;
 
-        $this->eventConnect = new CallbackEventsContainer();
-        $this->eventDisconnect = new CallbackEventsContainer();
-        $this->eventFound = new CallbackEventsContainer();
+        $this->eventConnect = new Event();
+        $this->eventDisconnect = new Event();
+        $this->eventFound = new Event();
 
         if (!($this->socket = socket_create($socketDomain, SOCK_DGRAM, SOL_UDP))) {
             throw new ConnectionException(socket_strerror(socket_last_error()));
@@ -59,7 +62,7 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function connect(AbstractAddress $listenAddress)
     {
@@ -83,17 +86,22 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
         if (!$this->connected) {
             $this->errorHandler->handleError();
         } else {
-            $this->eventConnect->callEvents();
+            $this->eventConnect->call();
+            $this->unblock();
         }
-
-        $this->unblock();
     }
 
-    public function onConnect(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onConnect(callable $callback): CallbackEventListener
     {
-        return $this->eventConnect->addEvent(CallbackEvent::create($callback));
+        return $this->eventConnect->attachCallbackListener($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function reconnect(): bool
     {
         $this->disconnect();
@@ -106,13 +114,20 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
         return true;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isConnected(): bool
     {
         return $this->connected;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function disconnect()
     {
+        // todo idempotency
         if ($this->isUnixAddress()) {
             if (file_exists($this->listenAddress->getSockPath())) {
                 unlink($this->listenAddress->getSockPath());
@@ -123,16 +138,19 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
                 ));
             }
         }
-        $this->eventDisconnect->callEvents();
-    }
-
-    public function onDisconnect(callable $callback): CallbackEvent
-    {
-        return $this->eventDisconnect->addEvent(CallbackEvent::create($callback));
+        $this->eventDisconnect->call();
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
+     */
+    public function onDisconnect(callable $callback): CallbackEventListener
+    {
+        return $this->eventDisconnect->attachCallbackListener($callback);
+    }
+
+    /**
+     * @inheritdoc
      */
     public function getConnectionResource(): AbstractConnectionResource
     {
@@ -140,70 +158,93 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function getClientsContainer(): ClientsContainerInterface
     {
         return $this->clientsContainer;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function find()
     {
-        $address = null;
-        $port = 0;
-        $bytes = socket_recvfrom($this->socket, $buffer, 1500, 0, $address, $port);
-        if ($bytes === false) {
-//            throw new ReadException('Fail while reading data from udp socket.', ReadException::ERROR_FAIL);
-            $this->errorHandler->handleError();
-            return;
-        } elseif ($bytes === 0) {
-            throw new ReadException('0 bytes read from udp socket.', ReadException::ERROR_EMPTY);
-        }
+        $select = [$this->socket];
+        $r = $w = [];
+        // ждем наличие активности на сокете
+        if (socket_select($select, $r, $w, 1)) {
+            $address = null;
+            $port = 0;
+            // пытаемся прочитать данные из сокета
+            while (false !== ($bytes = socket_recvfrom($this->socket, $buffer, 65535, 0, $address, $port))) {
+                if ($bytes === 0) {
+                    throw new ReadException('0 bytes read from udp socket.', ReadException::ERROR_EMPTY);
+                }
 
-        if ($this->isIpAddress()) {
-            $clientAddress = new Ipv4Address($address, $port);
-        } else {
-            $clientAddress = new UnixAddress($address);
-        }
+                if ($this->isIpAddress()) {
+                    $clientAddress = new Ipv4Address($address, $port);
+                } else {
+                    $clientAddress = new UnixAddress($address);
+                }
 
-        if (!$this->clientsContainer->existsByAddress($clientAddress)) {
-            $this->eventFound->callEvents(new VirtualUdpConnection(
-                $this->socketDomain,
-                new SocketConnectionResource(
-                    $this->socket
-                ),
-                $clientAddress,
-                []
-            ));
-        } elseif (!($bytes === 1 && $buffer == 1)) {
-            $client = $this->clientsContainer->getByAddress($clientAddress);
-            $connectionResource = $client->getConnectionResource();
-            if (!$connectionResource instanceof VirtualUdpConnection) {
-                throw new \LogicException('Unknown connection resource.');
+                if (!$this->clientsContainer->existsByAddress($clientAddress)) {
+                    // если до сих пор данные с такого адреса не приходили в сокет,
+                    // создадим виртуального серверного клиента
+                    $this->eventFound->call(new VirtualUdpConnection(
+                        $this->socketDomain,
+                        new SocketConnectionResource(
+                            $this->socket
+                        ),
+                        $clientAddress,
+                        []
+                    ));
+                } elseif (!($bytes === 1 && $buffer == 1)) {
+                    // "1" - это сообщение-приветствие при "подключении" к удаленному udp сокету
+                    // если пришло сообщение от известного адреса (клиента)
+                    $client = $this->clientsContainer->getByAddress($clientAddress);
+                    $connectionResource = $client->getConnectionResource();
+                    if (!$connectionResource instanceof VirtualUdpConnection) {
+                        throw new \LogicException('Unknown connection resource.');
+                    }
+                    // добавляем прочитанные данные в буфер виртуального клиента
+                    $connectionResource->addToBuffer($buffer);
+                }
             }
-            $connectionResource->addToBuffer($buffer);
         }
+        // теперь организуем чтение из буферов виртуальных клиентов
         foreach ($this->clientsContainer->list() as $client) {
             $connectionResource = $client->getConnectionResource();
             if (!$connectionResource instanceof VirtualUdpConnection) {
+                // в качестве клиентов могут быть только такие костыльные клиенты
                 throw new \LogicException('Unknown connection resource.');
             }
             if ($connectionResource->getBufferLength() > 0) {
+                // если в буфере клиента что-то есть, прочитаем
                 $client->read();
             }
         }
     }
 
-    public function onFound(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onFound(callable $callback): CallbackEventListener
     {
-        return $this->eventFound->addEvent(CallbackEvent::create($callback));
+        return $this->eventFound->attachCallbackListener($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function block()
     {
         socket_set_block($this->socket);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function unblock()
     {
         socket_set_nonblock($this->socket);

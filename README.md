@@ -1,86 +1,21 @@
-# esockets-php
-Event-based sockets for php
+# Easy work with php sockets, using callback handlers
 
-## Use sample
-Sample for using Esockets in file sample/index.php
+## What is esockets?
 
-### Which PHP version is supported?
-Supported PHP7 or higher version
+This project was conceived as a tool to facilitate the work with inter-process communication.
+
+## Which PHP version is supported?
+
+Supported PHP 7.0 or higher version
 
 ## Samples of use:
-[wiki](https://github.com/maestroprog/esockets-php/wiki)
+* [A simple example of working server and client in blocking mode](sample/index-wiki.php)
+* [An example of a simple HTTP server](sample/http/server.php)
 
-# Базовые примеры использования Esockets
+## Features
 
-## 1. Создание и настройка сервера
-Создаем экземпляр класса \Esockets\Server и выполняем открытие порта для прослушивания входящих соединений
+* Callback handlers for all socket events,
+* Built-in application protocol `Easy`, allowing to transfer on a network practically any data structures of php (only for tcp),
+* Supports blocking and non-blocking modes of operation
+* Correct work on Linux and Windows
 
-```php
-// массив конфигурации общий для сервера и клиента, все опции в конфигурации указаны по умолчанию
-$config = [
-    'socket_domain' => AF_INET, // IPv4 протокол (при создании соединения используется TCP), можно изменить на AF_UNIX, если обмен данными будет происходит в пределах одной операционной системы
-    'socket_address' => '127.0.0.1', // локальный IP адрес. для AF_UNIX соединения используется путь к файлу сокета
-    'socket_port' => '8082', // прослушиваемый порт для входящих соединений (для AF_UNIX)
-    'socket_reconnect' => false, // true для автоматического переподключения при обрыве соединения.
-];
-$server = new \Esockets\Server($config);
-if (!$server->connect()) {
-    echo 'Не удалось запустить сервер!';
-    exit;
-}
-```
-
-## 2. Создание и подключение клиента к серверу
-После создания сервера, можно к нему подключиться. Для этого создадим экземпляр класса \Esockets\AbstractClient, и выполним подключение.
-
-```php
-$client = new Esockets\AbstractClient($config); // передаем конфигурацию, такую же, как для сервера
-if ($client->connect()) {
-    error_log('успешно соединился!');
-}
-```
-
-## 3. Принятие входящих соединений на сервере и чтение данных
-В следующем фрагменте кода будет продемонстрировано назначение обработчиков для входящих соединений, а также запуск прослушивания входящих соединений.
-
-```php
-// назначаем обработчик для новых входящих соединений. при соединении клиента к серверу будет вызван переданный обработчик
-$server->onConnectPeer(function ($peer) {
-    /**
-     * @var $peer \Esockets\Peer
-     */
-    error_log('Принял входящее соединение ' . $peer->getAddress() . ' !');
-    // назначаем обработчик для чтения данных от присоединившегося клиента. при получении данных от подключенного клиента будет вызван переданный обработчик
-    $peer->onRead(function ($msg) use ($peer) {
-        /**
-         * @var $this \Esockets\Peer
-         */
-        error_log('Получил сообщение от ' . $peer->getAddress() . ' ' . $msg . ' !');
-    });
-    // назначаем обработчик для отсоединения клиента от сервера. этот обработчик будет вызван при отсоединении клиента
-    $peer->onDisconnect(function () use ($peer) {
-        error_log('Клиент ' . $peer->getAddress() . ' отсоединился от сервера');
-    });
-});
-
-// прослушиваем входящие соединения
-$server->listen(); // метод запускает обнаружение новых входящих соединений на сервере
-```
-Так как Esockets по умолчанию работает в неблокирующем режиме - все методы (в т.ч. $server->listen()) немедленно возвращают управление.
-
-## 4. Отправка сообщения от клиента на сервер
-```php
-$client->send('HELLO WORLD!'); // метод возвращает true в случае успешной отправки, иначе false
-```
-Для того, чтобы сервер принял сообщение от клиента, для него необходимо выполнить метод read()
-```php
-$server->read();
-```
-
-## Результатом выполнения всего кода будет следующее:
-```
-$ php -f index-wiki.php
-успешно соединился!
-Принял входящее соединение 127.0.0.1:51966 !
-Получил сообщение от 127.0.0.1:51966 HELLO WORLD! !
-```

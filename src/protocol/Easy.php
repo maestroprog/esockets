@@ -2,8 +2,7 @@
 
 namespace Esockets\protocol;
 
-use Esockets\base\CallbackEvent;
-use Esockets\base\CallbackEventsContainer;
+use Esockets\base\CallbackEventListener;
 use Esockets\base\exception\ReadException;
 use Esockets\base\exception\SendException;
 use Esockets\base\IoAwareInterface;
@@ -52,7 +51,7 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
     public function returnRead()
     {
         $result = null;
-        $readData = $this->provider->read($this->provider->getMaxPacketSize(), false);
+        $readData = $this->provider->read($this->provider->getReadBufferSize(), false);
         if (!is_null($readData)) {
             $this->buffer .= $readData;
         }
@@ -86,9 +85,9 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
     /**
      * @inheritDoc
      */
-    public function onReceive(callable $callback): CallbackEvent
+    public function onReceive(callable $callback): CallbackEventListener
     {
-        return $this->eventReceive->addEvent(CallbackEvent::create($callback));
+        return $this->eventReceive->attachCallbackListener($callback);
     }
 
     /**
@@ -161,7 +160,8 @@ final class Easy extends AbstractProtocol implements PingSupportInterface
         }
         // начиная с этого момента исходная "$data" становится "$raw"
         $length = strlen($raw);
-        if ($length - self::HEADER_LENGTH >= $this->provider->getMaxPacketSize()) { // todo 65535 bytes
+        $maxSizeForWriting = $this->provider->getMaxPacketSizeForWriting();
+        if ($maxSizeForWriting > 0 && $length - self::HEADER_LENGTH >= $maxSizeForWriting) {
             throw new SendException('Big data size to send! I can split it\'s');
             // кто-то попытался передать более 64 КБ за раз, выдаем ошибку
             //...пока что

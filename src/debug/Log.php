@@ -6,10 +6,16 @@ final class Log
 {
     protected static $env;
 
-    public static function log($message)
+    public static function log(...$message)
     {
         if (self::$env) {
-            $message = sprintf('{%s} [%s]: %s', self::$env, date('H:i:s'), $message);
+            $message = sprintf(
+                '{%s} [%s].[%4f]: %s',
+                self::$env,
+                date('H:i:s'),
+                microtime(true) - time(),
+                implode(' , ', $message)
+            );
         }
         if (PHP_OS === 'WINNT') {
             if (ini_get('log_errors')) {

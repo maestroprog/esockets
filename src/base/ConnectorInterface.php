@@ -3,28 +3,62 @@
 namespace Esockets\base;
 
 /**
- * Интерфейс поддержки соединений.
+ * Интерфейс поддержки соединений (реальных или виртуальных).
  */
 interface ConnectorInterface
 {
     /**
+     * Выполняет подключение к указанному адресу.
+     *
      * @param AbstractAddress $address
      * @return void
      */
     public function connect(AbstractAddress $address);
 
-    public function onConnect(callable $callback): CallbackEvent;
-
-    public function reconnect(): bool;
-
-    public function isConnected(): bool;
-
-    public function disconnect();
-
-    public function onDisconnect(callable $callback): CallbackEvent;
+    /**
+     * Назначает обработчик события возникающего при успешном подключении.
+     *
+     * @param callable $callback
+     * @return CallbackEventListener
+     */
+    public function onConnect(callable $callback): CallbackEventListener;
 
     /**
-     * Должен вернуть ресурс соединения.
+     * Выполняет переподключение.
+     * При переподключении сначала вызывается @see ConnectorInterface::disconnect(),
+     * а затем @see ConnectorInterface::connect().
+     *
+     * @return bool
+     */
+    public function reconnect(): bool;
+
+    /**
+     * Вернёт true, если находится в подключенном состоянии.
+     *
+     * @return bool
+     */
+    public function isConnected(): bool;
+
+    /**
+     * Выполняет отключение.
+     *
+     * @return mixed
+     */
+    public function disconnect();
+
+    /**
+     * Назначает обработчик события возникающего при отключении.
+     * Отключение может произойти не только при вызове @see ConnectorInterface::disconnect(),
+     * но и при чтении, или записи, и при других операцих.
+     * Поведение отключения всецело определяется разработчиком соединения.
+     *
+     * @param callable $callback
+     * @return CallbackEventListener
+     */
+    public function onDisconnect(callable $callback): CallbackEventListener;
+
+    /**
+     * Должен вернуть обёртку ресурса соединения.
      *
      * @return AbstractConnectionResource
      */

@@ -6,24 +6,22 @@ use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
-use Esockets\base\CallbackEvent;
-use Esockets\base\CallbackEventsContainer;
+use Esockets\base\CallbackEventListener;
+use Esockets\base\Event;
 use Esockets\base\ClientsContainerInterface;
 use Esockets\base\exception\ConnectionException;
 use Esockets\base\HasClientsContainer;
 use Esockets\Client;
 
 /**
- * Простая реализация Tcp сервера.
- * После создания слушающего сокета,
- * сервер автоматически переключает его в неболокирующий режим.
+ * Простая реализация TCP сервера.
+ * После создания слушающего сокета он автоматически переключается в неболокирующий режим.
  */
 final class TcpServer extends AbstractServer implements BlockingInterface, HasClientsContainer
 {
     use SocketTrait;
 
     private $maxConn;
-
     /**
      * @var Ipv4Address|UnixAddress
      */
@@ -41,6 +39,13 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     private $eventDisconnect;
     private $eventFound;
 
+    /**
+     * @param int $socketDomain Домен сокета
+     * @param int $maxConn Максимальное количество соединений в очереди (параметр backlog)
+     * @param SocketErrorHandler $errorHandler
+     * @param ClientsContainerInterface $clientsContainer
+     * @throws ConnectionException
+     */
     public function __construct(
         int $socketDomain,
         int $maxConn,
@@ -53,9 +58,9 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         $this->errorHandler = $errorHandler;
         $this->clientsContainer = $clientsContainer;
 
-        $this->eventConnect = new CallbackEventsContainer();
-        $this->eventDisconnect = new CallbackEventsContainer();
-        $this->eventFound = new CallbackEventsContainer();
+        $this->eventConnect = new Event();
+        $this->eventDisconnect = new Event();
+        $this->eventFound = new Event();
 
         if (!($this->socket = socket_create($socketDomain, SOCK_STREAM, SOL_TCP))) {
             throw new ConnectionException(socket_strerror(socket_last_error()));
@@ -66,6 +71,9 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         $this->connectionResource = new SocketConnectionResource($this->socket);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function connect(AbstractAddress $listenAddress)
     {
         $this->listenAddress = $listenAddress;
@@ -88,7 +96,7 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         if (!$this->connected) {
             $this->errorHandler->handleError();
         } else {
-            $this->eventConnect->callEvents();
+            $this->eventConnect->call();
         }
 
         if (!socket_listen($this->socket, $this->maxConn)) {
@@ -98,11 +106,17 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         }
     }
 
-    public function onConnect(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onConnect(callable $callback): CallbackEventListener
     {
-        return $this->eventConnect->addEvent(CallbackEvent::create($callback));
+        return $this->eventConnect->attachCallbackListener($callback);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function reconnect(): bool
     {
         $this->disconnect();
@@ -114,15 +128,21 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         return true;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isConnected(): bool
     {
         return $this->connected;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function disconnect()
     {
         if (!is_resource($this->socket) || get_resource_type($this->socket) !== 'Socket') {
-            throw new \LogicException('Socket already is disconnected.');
+            return;
         }
         socket_shutdown($this->socket);
         $this->block(); // блокируем сокет перед его закрытием
@@ -138,16 +158,19 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
                 ));
             }
         }
-        $this->eventDisconnect->callEvents();
-    }
-
-    public function onDisconnect(callable $callback): CallbackEvent
-    {
-        return $this->eventDisconnect->addEvent(CallbackEvent::create($callback));
+        $this->eventDisconnect->call();
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
+     */
+    public function onDisconnect(callable $callback): CallbackEventListener
+    {
+        return $this->eventDisconnect->attachCallbackListener($callback);
+    }
+
+    /**
+     * @inheritdoc
      */
     public function getConnectionResource(): AbstractConnectionResource
     {
@@ -155,18 +178,22 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function getClientsContainer(): ClientsContainerInterface
     {
         return $this->clientsContainer;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function find()
     {
         /**
          * @var $connectionsIndex Client[]
          */
+        // собираем массив всех подключений
         $connectionsIndex = [];
         $connections = array_map(function (Client $client) use (&$connectionsIndex) {
             $resource = $client->getConnectionResource()->getResource();
@@ -175,16 +202,19 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         }, $this->clientsContainer->list());
         $write = $except = [];
         $connections[-1] = $this->socket;
+
+        // socket_select() отбирает активные соединения
         if (false === ($changed = socket_select($connections, $write, $except, 1))) {
             $this->errorHandler->handleError();
         } elseif ($changed > 0) {
+            // пройдёмся по активным соединениям
             foreach ($connections as $idx => $readConnection) {
                 if ($idx > -1) {
+                    // чтение из подключенных сокетов (клиентов)
                     $connectionsIndex[(int)$readConnection]->read();
-                } else {
-                    if ($connection = socket_accept($this->socket)) {
-                        $this->eventFound->callEvents(new SocketConnectionResource($connection));
-                    }
+                } elseif ($connection = socket_accept($this->socket)) {
+                    // принятие новых соединений к серверному сокету
+                    $this->eventFound->call(new SocketConnectionResource($connection));
                 }
             }
             foreach ($write as $writeConnection) {
@@ -196,31 +226,25 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         }
     }
 
-    public function onFound(callable $callback): CallbackEvent
+    /**
+     * @inheritdoc
+     */
+    public function onFound(callable $callback): CallbackEventListener
     {
-        return $this->eventFound->addEvent(CallbackEvent::create($callback));
+        return $this->eventFound->attachCallbackListener($callback);
     }
 
-    /*
-    public function select()
-    {
-        $sockets = [$this->socket];
-        foreach ($this->connections as $peer) {
-            $sockets[] = $peer->getConnection();
-        }
-        $write = [];
-        $except = [];
-        if (false === ($rc = socket_select($sockets, $write, $except, null))) {
-            throw new \Exception('socket_select failed!');
-        }
-    }
-    */
-
+    /**
+     * @inheritdoc
+     */
     public function block()
     {
         socket_set_block($this->socket);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function unblock()
     {
         socket_set_nonblock($this->socket);

@@ -6,6 +6,10 @@ use Esockets\base\AbstractAddress;
 use Esockets\base\AbstractConnectionResource;
 use Esockets\base\exception\SendException;
 
+/**
+ * Класс костыльного UDP соединения.
+ * Todo избавиться от такого костыля.
+ */
 final class VirtualUdpConnection extends AbstractConnectionResource
 {
     use SocketTrait;

@@ -2,6 +2,9 @@
 
 namespace Esockets\base;
 
+/**
+ * Интерфейс поддержки блокировок соединений.
+ */
 interface BlockingInterface
 {
     /**

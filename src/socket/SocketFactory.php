@@ -9,6 +9,9 @@ use Esockets\base\AbstractConnectionFactory;
 use Esockets\base\exception\ConnectionFactoryException;
 use Esockets\ClientsContainer;
 
+/**
+ * Фабрика объектов сокет сервера и клиента.
+ */
 final class SocketFactory extends AbstractConnectionFactory
 {
     const SOCKET_DOMAIN = 'socket_domain';
@@ -18,7 +21,7 @@ final class SocketFactory extends AbstractConnectionFactory
     const DEFAULTS = [
         self::SOCKET_DOMAIN => AF_INET,
         self::SOCKET_PROTOCOL => SOL_TCP,
-        self::SOCKET_TCP_MAX_CONN => 1024,
+        self::SOCKET_TCP_MAX_CONN => 512,
     ];
 
     private $socket_domain;
@@ -26,7 +29,7 @@ final class SocketFactory extends AbstractConnectionFactory
     private $socket_max_conn;
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function __construct(array $params = [])
     {
@@ -35,21 +38,7 @@ final class SocketFactory extends AbstractConnectionFactory
         }
 
         foreach ($params as $param => $value) {
-            switch ($param) {/*
-                case self::TIMEOUT:
-                case self::RECONNECT:
-                    if (!is_int($value)) {
-                        throw new ConnectionFactoryException($param . ' parameter must be is integer.');
-                    }
-                    // correcting the negative value
-                    if ($value < 0) {
-                        if ($param === self::RECONNECT && $value < -1) {
-                            $value = -1;
-                        } else {
-                            $value = 0;
-                        }
-                    }
-                    break;*/
+            switch ($param) {
                 case self::SOCKET_DOMAIN:
                     if (!in_array($value, [AF_INET, AF_UNIX])) {
                         throw new ConnectionFactoryException(
@@ -71,6 +60,9 @@ final class SocketFactory extends AbstractConnectionFactory
         }
     }
 
+    /**
+     * @inheritdoc
+     */
     public function makeClient(): AbstractClient
     {
         if ($this->socket_protocol === SOL_TCP) {
@@ -83,6 +75,9 @@ final class SocketFactory extends AbstractConnectionFactory
         return $client;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function makeServer(): AbstractServer
     {
         if ($this->socket_protocol === SOL_TCP) {
@@ -100,10 +95,17 @@ final class SocketFactory extends AbstractConnectionFactory
         return $client;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function makePeer(AbstractConnectionResource $connectionResource): AbstractClient
     {
         if ($this->socket_protocol === SOL_TCP) {
-            $peer = TcpClient::createConnected($this->socket_domain, $this->makeErrorHandler(), $connectionResource);
+            $peer = TcpClient::createConnected(
+                $this->socket_domain,
+                $this->makeErrorHandler(),
+                $connectionResource
+            );
         } elseif ($this->socket_protocol === SOL_UDP) {
             $peer = UdpClient::createConnected(
                 $this->socket_domain,

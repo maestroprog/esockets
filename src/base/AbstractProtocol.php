@@ -18,7 +18,7 @@ abstract class AbstractProtocol implements ReaderInterface, SenderInterface
     public function __construct(IoAwareInterface $provider)
     {
         $this->provider = $provider;
-        $this->eventReceive = new CallbackEventsContainer();
+        $this->eventReceive = new Event();
     }
 
     public function read(): bool
@@ -27,7 +27,7 @@ abstract class AbstractProtocol implements ReaderInterface, SenderInterface
         if (is_null($data)) {
             return false;
         }
-        $this->eventReceive->callEvents($data);
+        $this->eventReceive->call($data);
         return true;
     }
 }

@@ -3,26 +3,25 @@
 namespace Esockets\protocol;
 
 use Esockets\base\AbstractProtocol;
-use Esockets\base\CallbackEvent;
-use Esockets\base\CallbackEventsContainer;
+use Esockets\base\CallbackEventListener;
+use Esockets\base\Event;
 use Esockets\base\IoAwareInterface;
 
 /**
- * Не-протокол, использующийся поверх TCP или UDP.
- * Для передачи потока байт.
+ * Фейковый протокол, использующийся как обёртка поверх TCP или UDP.
  */
 final class Dummy extends AbstractProtocol
 {
     private $eventReceive;
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function __construct(IoAwareInterface $provider)
     {
         parent::__construct($provider);
 
-        $this->eventReceive = new CallbackEventsContainer();
+        $this->eventReceive = new Event();
     }
 
     /**
@@ -30,8 +29,8 @@ final class Dummy extends AbstractProtocol
      */
     public function read(): bool
     {
-        if (null !== ($data = $this->provider->read($this->provider->getMaxPacketSize(), false))) {
-            $this->eventReceive->callEvents($data);
+        if (null !== ($data = $this->provider->read($this->provider->getMaxPacketSizeForWriting(), false))) {
+            $this->eventReceive->call($data);
             return true;
         }
         return false;
@@ -42,8 +41,9 @@ final class Dummy extends AbstractProtocol
      */
     public function send($data): bool
     {
-        if (strlen($data) > $this->provider->getMaxPacketSize()) {
-            $packets = str_split($data, $this->provider->getMaxPacketSize());
+        $maxSize = $this->provider->getMaxPacketSizeForWriting();
+        if (strlen($data) > $maxSize && $maxSize > 0) {
+            $packets = str_split($data, $maxSize);
             array_walk($packets, function (string $packet) {
                 $this->provider->send($packet);
             });
@@ -52,18 +52,18 @@ final class Dummy extends AbstractProtocol
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
     public function returnRead()
     {
-        return $this->provider->read($this->provider->getMaxPacketSize(), false);
+        return $this->provider->read($this->provider->getMaxPacketSizeForWriting(), false);
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
-    public function onReceive(callable $callback): CallbackEvent
+    public function onReceive(callable $callback): CallbackEventListener
     {
-        return $this->eventReceive->addEvent(CallbackEvent::create($callback));
+        return $this->eventReceive->attachCallbackListener($callback);
     }
 }

@@ -29,7 +29,7 @@ interface BroadcastingInterface
      * Обработчик вызывается при отсоединении последнего подключенного пира.
      *
      * @param callable $callback
-     * @return CallbackEvent
+     * @return CallbackEventListener
      */
-    public function onDisconnectAll(callable $callback): CallbackEvent;
+    public function onDisconnectAll(callable $callback): CallbackEventListener;
 }

@@ -1,50 +1,65 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: yarullin
- * Date: 21.06.2016
- * Time: 21:13
- */
 
-require_once 'tcp/common.php';
+use Esockets\base\Configurator;
+use Esockets\socket\SocketFactory;
+
+require_once __DIR__ . '/../src/bootstrap.php'; // подключаем автолоадер
 
 // массив конфигурации общий для сервера и клиента, все опции в конфигурации указаны по умолчанию
 $config = [
-    'socket_domain' => AF_INET, // IPv4 протокол (при создании соединения используется TCP), можно изменить на AF_UNIX, если обмен данными будет происходит в пределах одной операционной системы
-    'socket_address' => '127.0.0.1', // локальный IP адрес. для AF_UNIX соединения используется путь к файлу сокета
-    'socket_port' => '8082', // прослушиваемый порт для входящих соединений (для AF_UNIX)
-    'socket_reconnect' => false, // true для автоматического переподключения при обрыве соединения.
+
+    Configurator::CONNECTION_TYPE => Configurator::CONNECTION_TYPE_SOCKET, // тип подключения - сокет
+    Configurator::CONNECTION_CONFIG => [ // настройки для сокета
+        SocketFactory::SOCKET_DOMAIN => AF_INET, // домен сокета
+        SocketFactory::SOCKET_PROTOCOL => SOL_TCP, // используемый транспортный протокол
+    ],
+    Configurator::PROTOCOL_CLASS => \Esockets\protocol\Easy::class, // используемый прикладной протокол
 ];
-$server = new \Esockets\TcpServer($config);
-if (!$server->connect()) {
-    echo 'Не удалось запустить сервер!';
-    exit;
+
+// будем слушать порт 8081 на localhost-е
+$listenAddress = new \Esockets\socket\Ipv4Address('127.0.0.1', 8081);
+
+$configurator = new \Esockets\base\Configurator($config); // инициализируем фабрику
+
+$server = $configurator->makeServer(); // производим настроенный объект сервера с сокетом внутри
+$server->block(); // устанавливаем блокирующий режим работы сервера
+try {
+    $server->connect($listenAddress); // заставляем сервер слушать указанный ip и порт
+    echo 'Сервер слушает ' . $listenAddress, PHP_EOL;
+} catch (\Esockets\base\exception\ConnectionException $e) {
+    echo 'Не удалось запустить сервер!', PHP_EOL;
+    return;
 }
-$client = new Esockets\TcpClient($config); // передаем конфигурацию, такую же, как для сервера
-if ($client->connect()) {
-    \Esockets\debug\Log::log('успешно соединился!');
-}
-// назначаем обработчик для новых входящих соединений. при соединении клиента к серверу будет вызван переданный обработчик
-$server->onConnectPeer(function ($peer) {
-    /**
-     * @var $peer \Esockets\Peer
-     */
-    \Esockets\debug\Log::log('Принял входящее соединение ' . $peer->getAddress() . ' !');
-    // назначаем обработчик для чтения данных от присоединившегося клиента. при получении данных от подключенного клиента будет вызван переданный обработчик
-    $peer->onRead(function ($msg) use ($peer) {
-        /**
-         * @var $this \Esockets\Peer
-         */
-        \Esockets\debug\Log::log('Получил сообщение от ' . $peer->getAddress() . ' ' . $msg . ' !');
+// назначаем обработчик для новых входящих соединений
+$server->onFound(function (\Esockets\Client $peer) {
+    echo 'Принял входящее соединение ' . $peer->getPeerAddress() . ' !', PHP_EOL;
+    // назначаем обработчик для чтения данных от присоединившегося клиента
+    $peer->onReceive(function ($msg) use ($peer) {
+        echo 'Получил сообщение от ' . $peer->getPeerAddress() . ' ' . var_export($msg, true) . ' !', PHP_EOL;
     });
-    // назначаем обработчик для отсоединения клиента от сервера. этот обработчик будет вызван при отсоединении клиента
+    // назначаем обработчик отсоединения клиента от сервера
     $peer->onDisconnect(function () use ($peer) {
-        \Esockets\debug\Log::log('Клиент ' . $peer->getAddress() . ' отсоединился от сервера');
+        echo 'Клиент ' . $peer->getPeerAddress() . ' отсоединился от сервера', PHP_EOL;
     });
 });
 
-// прослушиваем входящие соединения
-$server->listen(); // метод запускает обнаружение новых входящих соединений на сервере
-$client->send('HELLO WORLD!'); // метод возвращает true в случае успешной отправки, иначе false
+$client = $configurator->makeClient(); // производим клиента, котороый будет подключаться к серверу
+$client->block(); // устанавливаем блокирующий режим работы
+try {
+    $client->connect($listenAddress); // заставляем клиента подключиться к серверу по указанному адресу
+    echo 'Клиент успешно соединился!', PHP_EOL;
+} catch (\Esockets\base\exception\ConnectionException $e) {
+    echo 'Клиент не смог подключиться!', PHP_EOL;
+    return;
+}
 
-$server->read();
+// так как сервер и клиент были переключены в блокирующий режим работы,
+// то все операции (соединение, прослушивание, чтение. отправка)
+// будут происходить последовательно, дожидаясь успешного завершения операции
+
+// прослушиваем входящие соединения
+$server->find(); // метод работает 1 секунду, после чего возвращает управление программе
+$client->send(['Hello' => 'World']); // отправим сообщение серверу в виде массива
+$server->find(); // сервер снова слушает входящие соединения
+
+echo 'The end', PHP_EOL;

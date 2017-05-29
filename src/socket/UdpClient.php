@@ -6,47 +6,72 @@ use Esockets\base\AbstractAddress;
 use Esockets\base\exception\ReadException;
 use Esockets\base\exception\SendException;
 
+/**
+ * Класс UDP клиента.
+ * Как и класс TCP клиента, может использоваться как в качестве обхекта клиента,
+ * так и в качестве объекта пира (серверного сокета, взаимодействующего с удалённым клиентом).
+ */
 final class UdpClient extends AbstractSocketClient
 {
+    /**
+     * @inheritdoc
+     */
     public function connect(AbstractAddress $serverAddress)
     {
         if ($this->connected) {
             throw new \LogicException('Socket is already connected.');
         }
+        $this->createSocket();
 
         $this->serverAddress = $serverAddress;
 
         try {
+            // отправляем один байт с числом "1" в качестве приветствия
             $this->send(1);
             $this->connected = true;
         } catch (SendException $e) {
-
+            ; // чтобы скрипт не падал перехватим исключение
         }
 
         if (!$this->connected) {
             $this->errorHandler->handleError();
         } else {
             $this->unblock();
-            $this->eventConnect->callEvents();
+            $this->eventConnect->call();
         }
     }
 
+    /**
+     * @inheritdoc
+     */
     public function disconnect()
     {
+        if (!$this->connected) {
+            return;
+        }
         $this->connected = false;
-        $this->eventDisconnect->callEvents();
+        $this->eventDisconnect->call();
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function getReadBufferSize(): int
+    {
+        return 65535;
+    }
+
+    /**
+     * @inheritdoc
+     * todo реализовать опцию $force
+     */
     public function read(int $length, bool $force)
     {
         $buffer = null;
         if ($this->connectionResource instanceof VirtualUdpConnection) {
-            /*$ip = null;
-            $port = 0;*/
             try {
                 $buffer = $this->connectionResource->read();
-            } catch (SendException $e) {
-                //$this->errorHandler->handleError();
+            } catch (ReadException $e) {
                 $this->disconnect();
             } finally {
                 $dataLength = strlen($buffer);
@@ -67,6 +92,7 @@ final class UdpClient extends AbstractSocketClient
                     $address = new Ipv4Address($address, $port);
                 }
                 if (!$this->getPeerAddress()->equalsTo($address)) {
+                    // если вдруг в сокет придёт дейтаграмма с левого адреса
                     throw new ReadException('Unknown peer: ' . $address);
                 }
                 $dataLength = strlen($buffer);
@@ -77,6 +103,18 @@ final class UdpClient extends AbstractSocketClient
         }
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function getMaxPacketSizeForWriting(): int
+    {
+        return 65507;
+    }
+
+    /**
+     * @inheritdoc
+     * todo добавить контроль кол-ва отправленынх байт
+     */
     public function send($data): bool
     {
         if ($this->isUnixAddress()) {

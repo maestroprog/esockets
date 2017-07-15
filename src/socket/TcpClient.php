@@ -156,7 +156,6 @@ final class TcpClient extends AbstractSocketClient
                     case SocketErrorHandler::ERROR_NOTHING:
                     case SocketErrorHandler::ERROR_SKIP:
                         // nothing
-                        break;
                     case SocketErrorHandler::ERROR_AGAIN:
                         // нужно повторить отправку подождем немного и попробуем отправить ещё раз
                         if ($tryCount++ > 10) {
@@ -183,6 +182,7 @@ final class TcpClient extends AbstractSocketClient
                 if ($tryCount++ > 10) {
                     throw new \RuntimeException('Sending failed!');
                 }
+                usleep(self::SOCKET_WAIT);
             } else {
                 if ($written < $length) {
                     // если данные отправлены не полностью

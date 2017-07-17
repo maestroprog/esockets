@@ -53,7 +53,7 @@ class SendPacketBuffer implements \ArrayAccess, PacketBufferInterface
 
     protected function addPacket(int $packetId, $data)
     {
-        echo 'sended ', $packetId, PHP_EOL;
+//        echo 'sended ', $packetId, PHP_EOL;
         $this->buffer[$packetId] = $data;
         $this->meta[$packetId]['time'] = time();
         $this->clean();

@@ -3,9 +3,9 @@
 namespace Esockets\socket;
 
 use Esockets\base\AbstractClient;
+use Esockets\base\AbstractConnectionFactory;
 use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
-use Esockets\base\AbstractConnectionFactory;
 use Esockets\base\exception\ConnectionFactoryException;
 use Esockets\ClientsContainer;
 
@@ -17,16 +17,19 @@ final class SocketFactory extends AbstractConnectionFactory
     const SOCKET_DOMAIN = 'socket_domain';
     const SOCKET_TCP_MAX_CONN = 'socket_max_conn';
     const SOCKET_PROTOCOL = 'socket_protocol';
+    const WAIT_INTERVAL = 'wait_interval';
 
     const DEFAULTS = [
         self::SOCKET_DOMAIN => AF_INET,
         self::SOCKET_PROTOCOL => SOL_TCP,
         self::SOCKET_TCP_MAX_CONN => 512,
+        self::WAIT_INTERVAL => 1000,
     ];
 
     private $socket_domain;
     private $socket_protocol;
     private $socket_max_conn;
+    private $wait_interval;
 
     /**
      * @inheritdoc
@@ -51,6 +54,11 @@ final class SocketFactory extends AbstractConnectionFactory
                         throw new ConnectionFactoryException(
                             'The ' . self::SOCKET_PROTOCOL . ' "' . $value . '" is not supported.'
                         );
+                    }
+                    break;
+                case self::WAIT_INTERVAL:
+                    if (!is_int($value) || $value <= 0) {
+                        throw new ConnectionFactoryException('The WAIT_INTERVAL must be bigger than 0.');
                     }
                     break;
                 default:
@@ -84,6 +92,7 @@ final class SocketFactory extends AbstractConnectionFactory
             $client = new TcpServer(
                 $this->socket_domain,
                 $this->socket_max_conn,
+                $this->wait_interval,
                 $this->makeErrorHandler(),
                 new ClientsContainer()
             );

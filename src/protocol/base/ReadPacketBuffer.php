@@ -62,7 +62,7 @@ class ReadPacketBuffer implements PacketBufferInterface
      */
     public function addPacket(int $id, bool $isPartedPacket, bool $isEndPart, $data, $meta = null): bool
     {
-        echo 'received  ', $id, PHP_EOL;
+//        echo 'received  ', $id, PHP_EOL;
         if ($isPartedPacket || $id > $this->lastCompletedId + 1) {
             // частичные пакеты в любом случае добавляем в буфер чтения
             // или чтение нескольких пакетов пропущено
@@ -119,7 +119,7 @@ class ReadPacketBuffer implements PacketBufferInterface
             }
             $ne++;
             if ($data['time'] < time() - self::READ_TIMEOUT) {
-                var_dump('timeout', $data['try']);
+//                var_dump('timeout', $data['try']);
                 // устанавливаем количество попыток
                 if (isset($data['try'])) {
                     if ($data['try'] > 10) {
@@ -149,7 +149,7 @@ class ReadPacketBuffer implements PacketBufferInterface
         }
         if ($ne > 0) {
 
-            echo 'not enough', $ne, PHP_EOL;
+//            echo 'not enough', $ne, PHP_EOL;
         }
 
         $nextId = $this->lastCompletedId + 1;

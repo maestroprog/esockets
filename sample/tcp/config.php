@@ -9,5 +9,5 @@ return [
         SocketFactory::SOCKET_DOMAIN => AF_INET,
         SocketFactory::SOCKET_PROTOCOL => SOL_TCP,
     ],
-    Configurator::PROTOCOL_CLASS => \Esockets\protocol\Easy::class,
+    Configurator::PROTOCOL_CLASS => \Esockets\protocol\EasyStream::class,
 ];

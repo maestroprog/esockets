@@ -13,7 +13,7 @@ $config = [
         SocketFactory::SOCKET_DOMAIN => AF_INET, // домен сокета
         SocketFactory::SOCKET_PROTOCOL => SOL_TCP, // используемый транспортный протокол
     ],
-    Configurator::PROTOCOL_CLASS => \Esockets\protocol\Easy::class, // используемый прикладной протокол
+    Configurator::PROTOCOL_CLASS => \Esockets\protocol\EasyStream::class, // используемый прикладной протокол
 ];
 
 // будем слушать порт 8081 на localhost-е

@@ -2,12 +2,13 @@
 
 namespace Esockets\protocol;
 
+use Esockets\base\AbstractProtocol;
 use Esockets\base\CallbackEventListener;
 use Esockets\base\ConnectorInterface;
 use Esockets\base\exception\ReadException;
 use Esockets\base\exception\SendException;
 use Esockets\base\IoAwareInterface;
-use Esockets\base\AbstractProtocol;
+use Esockets\base\PingSupportInterface;
 use Esockets\protocol\base\ReadPacketBuffer;
 use Esockets\protocol\base\SendPacketBuffer;
 
@@ -20,12 +21,11 @@ use Esockets\protocol\base\SendPacketBuffer;
  *  - нумерация получившихся партиций, и их сборка после получения (нужно для UDP)
  *  - уведомления о доставке (нужно для UDP) todo
  *  - десериализация полученных на другой стороне данных.
- * Структура пакета данных протокола Easy:
+ * Структура пакета данных протокола EasyStream:
  * FS####data* - короткий пакет, у него 1 байт на флаги, 1 байт на длину данных, и 4 байта на номер пакета,
  * FSSSS####data* - обычный пакет, 1 байта на флаги, по 4 байта на длину данных и номер пакета
  */
-final class Easy extends AbstractProtocol
-    //implements PingSupportInterface
+final class EasyDatagram extends AbstractProtocol implements PingSupportInterface
 {
     const SHORT_PACKET = 0x01; // короткий пакет
     const PACKET_END = 0x02; // запрос пакета
@@ -39,11 +39,11 @@ final class Easy extends AbstractProtocol
 //    const DATA_PING_PONG = 0x40; // reserved
     const DATA_CONTROL = 0x80; // reserved
 
-    const SHORT_HEADER_SIZE = 6; // размер короткого заголовка Easy протокола
+    const SHORT_HEADER_SIZE = 6; // размер короткого заголовка EasyStream протокола
     const SHORT_PACKET_SIZE = 256; // размер полезных данных короткого пакета
     const SHORT_PACKET_SIZE_WITH_HEADER
         = self::SHORT_PACKET_SIZE + self::SHORT_HEADER_SIZE; // полный размер короткого пакета
-    const HEADER_SIZE = 9; // размер обычного заголовка Easy протокола
+    const HEADER_SIZE = 9; // размер обычного заголовка EasyStream протокола
     const PACKET_MAX_SIZE = 4294967296; // максимальный размер полезных данных пакета, теоретический (4GB)
     const PACKET_MAX_SIZE_WITH_HEADER
         = self::PACKET_MAX_SIZE + self::HEADER_SIZE; // полный размер обычного пакета
@@ -142,7 +142,7 @@ final class Easy extends AbstractProtocol
                 // если что-то можно прочитать в буфере
                 // сначала прочитаем флаги нового поступившего пакета
                 $flag = unpack('Cflag', substr($this->readBuffer, 0, 1))['flag'];
-                if ($flag & self::SHORT_PACKET) {
+                if ($flag & self::SHORT_PACKET == self::SHORT_PACKET) {
                     // если пакет является коротким
                     list($size, $packetId) = array_values(unpack(
                         'Csize/Nnumber',
@@ -171,7 +171,7 @@ final class Easy extends AbstractProtocol
                         continue;
                     } else {
                         // иначе кидаем исключение
-                        break;
+//                        break;
                         throw new ReadException(
                             sprintf('Not enough length: %d bytes', $needRead - strlen($appendBuffer)),
                             ReadException::ERROR_FAIL
@@ -186,11 +186,11 @@ final class Easy extends AbstractProtocol
 
                 if (($flag & self::PACKET_REQUEST) > 0 && $packetId === 0) {
                     // если пакет - запрос другого пакета
-                    var_dump('packet requested');
+//                    var_dump('packet requested');
                     if (isset($this->sendPackets[(int)$data])) {
                         // если пакет есть в буфере отправки
                         $this->provider->send($this->sendPackets[(int)$data]);
-                        var_dump('packet sended');
+//                        var_dump('packet sended');
 //                        unset($this->sendPackets[$packetId]);
                     }
                     // продолжаем чтение

@@ -1,4 +1,4 @@
-# Easy work with php sockets, using callback handlers
+# EasyStream work with php sockets, using callback handlers
 
 ## What is esockets?
 
@@ -15,7 +15,7 @@ Supported PHP 7.0 or higher version
 ## Features
 
 * Callback handlers for all socket events,
-* Built-in application protocol `Easy`, allowing to transfer on a network practically any data structures of php (only for tcp),
+* Built-in application protocol `EasyStream`, allowing to transfer on a network practically any data structures of php (only for tcp),
 * Supports blocking and non-blocking modes of operation
 * Correct work on Linux and Windows
 

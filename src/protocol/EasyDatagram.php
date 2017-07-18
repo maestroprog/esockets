@@ -44,6 +44,14 @@ final class EasyDatagram extends AbstractProtocol implements PingSupportInterfac
         $data = $this->provider->read($this->provider->getReadBufferSize(), false);
         if (!is_null($data)) {
             $result = $this->unpack($data);
+            if ($result instanceof PingPacket) {
+                if (!$result->isResponse()) {
+                    $this->send(PingPacket::response($result->getValue()));
+                } else {
+                    $this->pongReceived($result);
+                }
+                $result = null;
+            }
         }
         return $result;
     }
@@ -162,14 +170,24 @@ final class EasyDatagram extends AbstractProtocol implements PingSupportInterfac
      */
     public function ping(PingPacket $pingPacket)
     {
-        // TODO: Implement ping() method.
+        $this->send($pingPacket);
     }
+
+    private $pongCallback;
 
     /**
      * @inheritDoc
      */
     public function pong(callable $pongReceived)
     {
-        // TODO: Implement pong() method.
+        $this->pongCallback = $pongReceived;
+    }
+
+    private function pongReceived(PingPacket $pong)
+    {
+        if (!is_null($this->pongCallback)) {
+            call_user_func($this->pongCallback, $pong);
+            $this->pongCallback = null;
+        }
     }
 }

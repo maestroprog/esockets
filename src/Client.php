@@ -23,11 +23,13 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
     private $protocol;
 
     private $timeout = 30;
+    private $pingInterval = 5;
     private $reconnectInterval = 1;
+    private $reconnectSupport = false;
 
-    const TIME_LAST_PING = 'last_ping';
-    const TIME_LAST_RECONNECT = 'last_reconnect';
-    const TIME_LAST_CHECK = 'last_check';
+    const TIME_LAST_CHECK = 'last_check'; // время успешной работы соединения
+    const TIME_LAST_PING = 'last_ping'; // время последнего пинга
+    const TIME_LAST_RECONNECT = 'last_reconnect'; // время последней попытки реконнекта
 
     private $times = [];
 
@@ -35,6 +37,11 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
     {
         $this->connection = $connection;
         $this->protocol = $protocol;
+
+        $this->resetTime();
+        $this->protocol->onReceive(function () {
+            $this->resetTime();
+        });
     }
 
     public function getPeerAddress(): AbstractAddress
@@ -53,6 +60,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
     public function connect(AbstractAddress $address)
     {
         $this->connection->connect($address);
+        $this->reconnectSupport = true;
     }
 
     /**
@@ -180,8 +188,8 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
      * Что делает:
      * - контролирует текущее состояние соединения,
      * - проверяет связь с заданным интервалом,
-     * - выполняет чтение входящих данных,
-     * - выполняет переподключение при обрыве связи, если это включено,
+     * //     * - выполняет чтение входящих данных,
+     * - выполняет переподключение при обрыве связи, если это включено (кроме серверного сокета),
      *
      * Возвращает true, если сокет жив, false если не работает.
      * Можно использовать в бесконечном цикле:
@@ -195,20 +203,28 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
     public function live(): bool
     {
         $alive = true;
+        $time = time();
+
         if ($this->isConnected()) {
-            $this->setTime();
-            if (($this->getTime(self::TIME_LAST_PING) + $this->timeout * 2) <= time()) {
+            if ($this->getTime() + $this->timeout <= $time) {
+                $alive = false;
+            } elseif (
+                $this->getTime(self::TIME_LAST_PING) + $this->pingInterval <= $time
+                && $this->getTime() + $this->pingInterval <= $time
+            ) {
                 // иногда пингуем соединение
                 $this->ping();
+                $this->resetTime(self::TIME_LAST_PING);
             }
-        } elseif ($this->reconnectInterval >= 0 && $this->getTime() + $this->timeout > time()) {
-            if ($this->getTime(self::TIME_LAST_RECONNECT) + $this->reconnectInterval <= time()) {
+        } elseif ($this->reconnectSupport) {
+            if ($this->getTime(self::TIME_LAST_RECONNECT) + $this->reconnectInterval <= $time) {
                 if ($this->reconnect()) {
-                    $this->setTime();
+                    $this->resetTime();
                 }
             } else {
-                $this->setTime(self::TIME_LAST_RECONNECT);
+                $this->resetTime(self::TIME_LAST_RECONNECT);
             }
+            // todo reconnect limit
         } else {
             $alive = false;
         }
@@ -217,23 +233,22 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
 
     protected function ping()
     {
-        $pingRequest = PingPacket::request(mt_rand(1, 9999));
         if ($this->protocol instanceof PingSupportInterface) {
+            $pingRequest = PingPacket::request(mt_rand(1, 9999));
             $this->protocol->pong(function (PingPacket $pingResponse) use ($pingRequest) {
                 if ($pingResponse->isResponse() && $pingRequest->getValue() === $pingRequest->getValue()) {
-                    $this->setTime(self::TIME_LAST_PING);
+                    $this->resetTime();
                 } else {
-                    trigger_error(
+                    throw new \RuntimeException(
                         'Unknown ping response value '
-                        . $pingRequest->getValue() . ':' . $pingResponse->getValue(),
-                        E_USER_WARNING
+                        . $pingRequest->getValue() . ':' . $pingResponse->getValue()
                     );
                 }
             });
             $this->protocol->ping($pingRequest);
         } else {
-            $this->protocol->send($pingRequest);
-            throw new \LogicException('HttpProtocol ' . get_class($this->protocol) . ' has no support ping.');
+//            $this->protocol->send($pingRequest);
+            throw new \LogicException('Protocol "' . get_class($this->protocol) . '" has no support ping.');
         }
     }
 
@@ -242,7 +257,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
         return $this->times[$key] ?? 0;
     }
 
-    protected function setTime(string $key = self::TIME_LAST_CHECK)
+    protected function resetTime(string $key = self::TIME_LAST_CHECK)
     {
         $this->times[$key] = time();
     }

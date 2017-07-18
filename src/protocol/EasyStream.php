@@ -7,6 +7,8 @@ use Esockets\base\CallbackEventListener;
 use Esockets\base\exception\ReadException;
 use Esockets\base\exception\SendException;
 use Esockets\base\IoAwareInterface;
+use Esockets\base\PingPacket;
+use Esockets\base\PingSupportInterface;
 
 /**
  * Протокол потоковой передачи данных любого типа.
@@ -17,8 +19,7 @@ use Esockets\base\IoAwareInterface;
  * FSdata* - короткий пакет, у него 1 байт на флаги, 1 байт на длину данных,
  * FSSSSdata* - обычный пакет, 1 байт на флаги, по 4 байта на длину данных и номер пакета
  */
-final class EasyStream extends AbstractProtocol
-    //implements PingSupportInterface
+final class EasyStream extends AbstractProtocol implements PingSupportInterface
 {
     const SHORT_PACKET = 0x01; // короткий пакет
     const DATA_INT = 0x02; // целочисленный тип
@@ -138,6 +139,13 @@ final class EasyStream extends AbstractProtocol
                 if (is_null($result)) {
                     // если не удалось распаковать - исключение
                     throw new SendException('Data packet is corrupted.');
+                } elseif ($result instanceof PingPacket) {
+                    if (!$result->isResponse()) {
+                        $this->send(PingPacket::response($result->getValue()));
+                    } else {
+                        $this->pongReceived($result);
+                    }
+                    $result = null;
                 }
             }
         } while (false); // цикл только для использования continue;
@@ -282,5 +290,31 @@ final class EasyStream extends AbstractProtocol
                 $flag = self::DATA_STRING;
         }
         return $flag;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function ping(PingPacket $pingPacket)
+    {
+        $this->send($pingPacket);
+    }
+
+    private $pongCallback;
+
+    /**
+     * @inheritDoc
+     */
+    public function pong(callable $pongReceived)
+    {
+        $this->pongCallback = $pongReceived;
+    }
+
+    private function pongReceived(PingPacket $pong)
+    {
+        if (!is_null($this->pongCallback)) {
+            call_user_func($this->pongCallback, $pong);
+            $this->pongCallback = null;
+        }
     }
 }

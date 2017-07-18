@@ -232,6 +232,11 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
                 // todo
             }
         }
+        foreach ($connectionsIndex as $client) {
+            if (!$client->live()) {
+                $client->disconnect();
+            }
+        }
     }
 
     /**

@@ -20,7 +20,6 @@ final class TcpClient extends AbstractSocketClient
             throw new \LogicException('Socket is already connected.');
         }
         $this->createSocket();
-
         $this->serverAddress = $serverAddress;
         if ($this->isIpAddress() && $serverAddress instanceof Ipv4Address) {
             if (socket_connect($this->socket, $serverAddress->getIp(), $serverAddress->getPort())) {
@@ -42,12 +41,16 @@ final class TcpClient extends AbstractSocketClient
         }
     }
 
+    private $receiveBuffer;
+
     /**
      * @inheritdoc
      */
     public function getReadBufferSize(): int
     {
-        return 1024 * 1024; // 1MB
+        return $this->receiveBuffer
+            ?? $this->receiveBuffer = (int)socket_get_option($this->socket, SOL_SOCKET, SO_RCVBUF)
+                ?: 1024 * 1024;
     }
 
     /**
@@ -55,8 +58,8 @@ final class TcpClient extends AbstractSocketClient
      */
     public function read(int $length, bool $force)
     {
-        $buffer = '';
-        $bufferSize = 0;
+        $buffer = null;
+//        $bufferSize = 0;
         $tryCount = 0; // количество попыток чтения
         // цикл чтения из сокета
         do {
@@ -65,18 +68,17 @@ final class TcpClient extends AbstractSocketClient
             if ($readBytes === false || $readBytes === 0) {
                 // если не удалось прочитать начинаем обрабатывать возникшую ошибку
                 $errorType = $this->errorHandler->getErrorLevel(
-                    socket_last_error($this->socket),
                     self::OP_READ
                 );
                 switch ($errorType) {
                     case SocketErrorHandler::ERROR_NOTHING:
-                        if (PHP_OS === 'WINNT') {
-                            if ($readBytes === 0 && $this->isConnected()) {
-                                // для windows этот кейс наступает при обрыве соединения
-                                $this->disconnect();
-                            }
-                            continue;
+//                        if (PHP_OS === 'WINNT') {
+                        if ($readBytes === 0 && $this->isConnected()) {
+                            // для windows этот кейс наступает при обрыве соединения
+                            $this->disconnect();
                         }
+                        continue;
+//                        }
                         // в общем этот кейс возникает когда нечего читать
                         return null;
                     case SocketErrorHandler::ERROR_AGAIN:
@@ -115,7 +117,7 @@ final class TcpClient extends AbstractSocketClient
                 $this->receivedBytes += $readBytes;
                 $this->receivedPackets++;
                 $buffer .= $data;
-                $bufferSize += $readBytes;
+//                $bufferSize += $readBytes;
                 $length -= $readBytes;
                 $tryCount = 0; // обнуляем счетчик попыток чтения
                 if ($force && $length > 0) {
@@ -132,7 +134,7 @@ final class TcpClient extends AbstractSocketClient
      */
     public function getMaxPacketSizeForWriting(): int
     {
-        return 0; // 1MB
+        return 0;
     }
 
     /**
@@ -142,14 +144,13 @@ final class TcpClient extends AbstractSocketClient
     {
         $tryCount = 0;
         $length = strlen($data);
-        $written = 0; // учет количества отправленных байт
+        $written = $length; // учет количества отправленных байт
         // цикл отправки в сокет
         do {
             $wrote = socket_send($this->socket, $data, $length, 0);
             if ($wrote === false) {
                 // если отправить не удалось - получим и обработем ошибку
                 $errorLevel = $this->errorHandler->getErrorLevel(
-                    socket_last_error($this->socket),
                     self::OP_WRITE
                 );
                 switch ($errorLevel) {
@@ -184,16 +185,17 @@ final class TcpClient extends AbstractSocketClient
                 }
                 usleep(self::SOCKET_WAIT);
             } else {
-                if ($written < $length) {
+                if ($wrote < $length) {
                     // если данные отправлены не полностью
                     // - урежем строку до неотправленных данных
-                    $data = substr($data, $wrote);
+                    $length -= $wrote;
+                    $data = substr($data, $wrote, $length);
                 }
-                $written += $wrote;
+                $written -= $wrote;
                 $this->transmittedBytes += $wrote;
                 $this->transmittedPackets++;
             }
-        } while ($written < $length);
+        } while ($written > 0);
         return true;
     }
 }

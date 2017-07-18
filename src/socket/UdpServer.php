@@ -7,8 +7,8 @@ use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEventListener;
-use Esockets\base\Event;
 use Esockets\base\ClientsContainerInterface;
+use Esockets\base\Event;
 use Esockets\base\exception\ConnectionException;
 use Esockets\base\exception\ReadException;
 use Esockets\base\HasClientsContainer;
@@ -222,6 +222,9 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
             if ($connectionResource->getBufferLength() > 0) {
                 // если в буфере клиента что-то есть, прочитаем
                 $client->read();
+            }
+            if (!$client->live()) {
+                $client->disconnect();
             }
         }
     }

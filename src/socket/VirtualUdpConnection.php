@@ -15,6 +15,7 @@ final class VirtualUdpConnection extends AbstractConnectionResource
     use SocketTrait;
 
     private $connectionResource;
+    private $id;
     private $peerAddress;
     private $buffer = [];
 
@@ -32,10 +33,20 @@ final class VirtualUdpConnection extends AbstractConnectionResource
         array $buffer
     )
     {
+        static $id = 0;
+        $this->id = ++$id;
         $this->socketDomain = $socketDomain;
         $this->connectionResource = $connectionResource;
         $this->peerAddress = $peerAddress;
         $this->buffer = $buffer;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getId(): int
+    {
+        return $this->id;
     }
 
     /**

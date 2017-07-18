@@ -7,8 +7,8 @@ use Esockets\base\AbstractConnectionResource;
 use Esockets\base\AbstractServer;
 use Esockets\base\BlockingInterface;
 use Esockets\base\CallbackEventListener;
-use Esockets\base\Event;
 use Esockets\base\ClientsContainerInterface;
+use Esockets\base\Event;
 use Esockets\base\exception\ConnectionException;
 use Esockets\base\HasClientsContainer;
 use Esockets\Client;
@@ -22,6 +22,8 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     use SocketTrait;
 
     private $maxConn;
+    private $timeoutSeconds;
+    private $timeoutMicroseconds;
     /**
      * @var Ipv4Address|UnixAddress
      */
@@ -42,6 +44,7 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     /**
      * @param int $socketDomain Домен сокета
      * @param int $maxConn Максимальное количество соединений в очереди (параметр backlog)
+     * @param int $waitInterval Время ожидания изменившихся соединений для системного вызова select() в миллисекундах
      * @param SocketErrorHandler $errorHandler
      * @param ClientsContainerInterface $clientsContainer
      * @throws ConnectionException
@@ -49,12 +52,15 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     public function __construct(
         int $socketDomain,
         int $maxConn,
+        int $waitInterval,
         SocketErrorHandler $errorHandler,
         ClientsContainerInterface $clientsContainer
     )
     {
         $this->socketDomain = $socketDomain;
         $this->maxConn = $maxConn;
+        $this->timeoutSeconds = (int)floor($waitInterval / 1000);
+        $this->timeoutMicroseconds = $waitInterval * 1000 - $this->timeoutSeconds * 1000000;
         $this->errorHandler = $errorHandler;
         $this->clientsContainer = $clientsContainer;
 
@@ -68,6 +74,7 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
             $this->errorHandler->setSocket($this->socket);
         }
         socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
+        socket_set_option($this->socket, SOL_TCP, TCP_NODELAY, 1);
         $this->connectionResource = new SocketConnectionResource($this->socket);
     }
 
@@ -204,7 +211,8 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
         $connections[-1] = $this->socket;
 
         // socket_select() отбирает активные соединения
-        if (false === ($changed = socket_select($connections, $write, $except, 1))) {
+        $changed = socket_select($connections, $write, $except, $this->timeoutSeconds, $this->timeoutMicroseconds);
+        if (false === $changed) {
             $this->errorHandler->handleError();
         } elseif ($changed > 0) {
             // пройдёмся по активным соединениям
@@ -222,6 +230,11 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
             }
             foreach ($except as $exceptConnection) {
                 // todo
+            }
+        }
+        foreach ($connectionsIndex as $client) {
+            if (!$client->live()) {
+                $client->disconnect();
             }
         }
     }

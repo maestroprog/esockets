@@ -8,13 +8,14 @@ final class Log
 
     public static function log(...$message)
     {
+        $message = implode(' , ', $message);
         if (self::$env) {
             $message = sprintf(
                 '{%s} [%s].[%4f]: %s',
                 self::$env,
                 date('H:i:s'),
                 microtime(true) - time(),
-                implode(' , ', $message)
+                $message
             );
         }
         if (PHP_OS === 'WINNT') {

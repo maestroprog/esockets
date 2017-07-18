@@ -25,7 +25,15 @@ final class SocketConnectionResource extends AbstractConnectionResource
     }
 
     /**
-     * @return resource Socket resource
+     * @inheritDoc
+     */
+    public function getId(): int
+    {
+        return (int)$this->socket;
+    }
+
+    /**
+     * @inheritDoc
      */
     public function getResource()
     {

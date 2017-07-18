@@ -81,15 +81,18 @@ final class SocketErrorHandler
 
     /**
      * Функция возвращает одну из констант self::ERROR_*
-     * Параметр $errno - номер ошибки функции socket_last_error()
      * Параметр $operation - номер операции; 1 = запись, 0 = чтение.
      *
-     * @param int $errno
      * @param int $operation
      * @return int
      */
-    public function getErrorLevel(int $errno, int $operation): int
+    public function getErrorLevel(int $operation): int
     {
+        if (!is_resource($this->socket) || !get_resource_type($this->socket) === 'Socket') {
+            $errno = SOCKET_EPIPE;
+        } else {
+            $errno = socket_last_error($this->socket);
+        }
         if ($errno === 0) {
             return self::ERROR_NOTHING;
         } elseif (isset(self::$catchableErrors[$errno])) {

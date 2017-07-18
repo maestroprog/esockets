@@ -25,6 +25,9 @@ $client->onReceive(function ($msg) use ($client) {
 });
 
 $client->send('Hello!');
-while (!$client->read()) ;
+while ($client->live()) {
+    $client->read();
+    sleep(1);
+}
 
 $client->disconnect();

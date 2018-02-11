@@ -1,7 +1,7 @@
 {
   "name": "maestroprog/esockets",
   "type": "library",
-  "description": "Easy sockets for PHP7.0+",
+  "description": "Easy sockets for PHP7.1+",
   "keywords": [
     "socket",
     "networking",
@@ -18,7 +18,7 @@
     }
   ],
   "require": {
-    "php": ">=7.0.0"
+    "php": ">=7.1.0"
   },
   "autoload": {
     "psr-4": {

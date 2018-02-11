@@ -6,7 +6,7 @@ This project was conceived as a tool to facilitate the work with inter-process c
 
 ## Which PHP version is supported?
 
-Supported PHP 7.0 or higher version
+Supported PHP 7.1 or higher version
 
 ## Samples of use:
 * [A simple example of working server and client in blocking mode](sample/index-wiki.php)

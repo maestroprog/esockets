@@ -6,7 +6,6 @@ namespace Esockets\base;
  * Описывает интерфейс класса, поддерживающего команду "пинг".
  * Реализовывать этот интерфейс можно как на уровне протокола,
  * так и на уровне соединения.
- * todo
  */
 interface PingSupportInterface
 {
@@ -22,7 +21,15 @@ interface PingSupportInterface
      * @param PingPacket $pingPacket
      * @return void
      */
-    public function ping(PingPacket $pingPacket);
+    public function ping(PingPacket $pingPacket): void;
+
+    /**
+     * Назначает кастомный обработчик для получения ping пакета.
+     *
+     * @param callable $pingReceived
+     * @return void
+     */
+    public function onPingReceived(callable $pingReceived): void;
 
     /**
      * Назначает специальный callback-обработчик пакетов "понг" от удаленного сервиса.
@@ -31,5 +38,5 @@ interface PingSupportInterface
      * @param callable $pongReceived
      * @return void
      */
-    public function pong(callable $pongReceived);
+    public function pong(callable $pongReceived): void;
 }

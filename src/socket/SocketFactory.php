@@ -62,7 +62,7 @@ final class SocketFactory extends AbstractConnectionFactory
                     }
                     break;
                 default:
-                    throw new \Exception('Wrong parameter: ' . $param . '.');
+                    throw new ConnectionFactoryException('Wrong parameter: ' . $param . '.');
             }
             $this->{$param} = $value;
         }

@@ -30,7 +30,6 @@ final class Configurator
     /**
      * @param array $config
      * @throws ConfiguratorException
-     * @throws ConnectionFactoryException
      */
     public function __construct(array $config = [])
     {
@@ -53,6 +52,10 @@ final class Configurator
         }
     }
 
+    /**
+     * @param array $config
+     * @throws ConnectionFactoryException
+     */
     private function initSocket(array $config)
     {
         $this->connectionFactory = new SocketFactory($config);
@@ -80,6 +83,10 @@ final class Configurator
         $this->clientClass = $clientClass;
     }
 
+    /**
+     * @param string $protocolClass
+     * @throws ConfiguratorException
+     */
     public function useProtocol(string $protocolClass)
     {
         if (!is_subclass_of($protocolClass, AbstractProtocol::class)) {
@@ -88,9 +95,6 @@ final class Configurator
         if (!class_exists($protocolClass)) {
             throw new ConfiguratorException('The protocol class "' . $protocolClass . '" is not exists.');
         }
-        /*if (!is_subclass_of($protocolClass, AbstractProtocol::class)) {
-            throw new ConfiguratorException('The class "' . $protocolClass . '" is not a protocol class.');
-        }*/
         $this->protocolClass = $protocolClass;
     }
 
@@ -126,18 +130,13 @@ final class Configurator
         );
     }
 
-    /*
-        public function getSocketType(): int
-        {
-            if (is_null($this->socketType)) {
-                throw new ConfiguratorException('Socket type is not configured.');
-            }
-            return $this->socketType;
-        }*/
-
+    /**
+     * @return AbstractAddress
+     * @throws ConfiguratorException
+     */
     public function getAddress(): AbstractAddress
     {
-        if (is_null($this->address) || !$this->address instanceof AbstractAddress) {
+        if (null === $this->address || !$this->address instanceof AbstractAddress) {
             throw new ConfiguratorException('Connection address is not configured.');
         }
         return $this->address;

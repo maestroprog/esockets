@@ -12,7 +12,7 @@ final class Ipv4Address extends AbstractAddress
     public function __construct(string $ip, int $port)
     {
         if ($port < 0 || $port > 65535) {
-            throw new \Exception('Invalid socket port.');
+            throw new \InvalidArgumentException('Invalid socket port.');
         }
         $this->ip = $ip;
         $this->port = $port;

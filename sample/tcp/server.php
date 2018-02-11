@@ -3,7 +3,7 @@
 use Esockets\debug\Log as _;
 
 set_time_limit(0);
-require __DIR__ . '/../../src/bootstrap.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 _::setEnv('server');
 

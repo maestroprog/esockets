@@ -42,6 +42,12 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
         $this->protocol->onReceive(function () {
             $this->resetTime();
         });
+        if ($this->protocol instanceof PingSupportInterface) {
+            $this->protocol->onPingReceived(function (PingPacket $ping) {
+                $this->resetTime();
+                $this->resetTime(self::TIME_LAST_PING);
+            });
+        }
     }
 
     public function getPeerAddress(): AbstractAddress
@@ -197,7 +203,6 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
      *     // тут делаем что-то.
      * }
      *
-     * todo
      * @return bool живое соединение, или не живое
      */
     public function live(): bool
@@ -247,8 +252,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
             });
             $this->protocol->ping($pingRequest);
         } else {
-//            $this->protocol->send($pingRequest);
-            throw new \LogicException('Protocol "' . get_class($this->protocol) . '" has no support ping.');
+//            throw new \LogicException('Protocol "' . get_class($this->protocol) . '" has no support ping.');
         }
     }
 

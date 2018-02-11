@@ -3,7 +3,7 @@
 use Esockets\base\Configurator;
 use Esockets\socket\SocketFactory;
 
-require_once __DIR__ . '/../src/bootstrap.php'; // подключаем автолоадер
+require_once __DIR__ . '/../vendor/autoload.php'; // подключаем автолоадер
 
 // массив конфигурации общий для сервера и клиента, все опции в конфигурации указаны по умолчанию
 $config = [

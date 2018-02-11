@@ -18,7 +18,7 @@ use Esockets\base\PingSupportInterface;
  *  - уведомления о доставке (нужно для UDP) todo
  *  - десериализация полученных на другой стороне данных.
  */
-final class EasyDatagram extends AbstractProtocol implements PingSupportInterface
+final class EasyDataGram extends AbstractProtocol implements PingSupportInterface
 {
     /**
      * ID последнего отправленного пакета.
@@ -42,11 +42,14 @@ final class EasyDatagram extends AbstractProtocol implements PingSupportInterfac
     {
         $result = null;
         $data = $this->provider->read($this->provider->getReadBufferSize(), false);
-        if (!is_null($data)) {
+        if (null !== $data) {
             $result = $this->unpack($data);
             if ($result instanceof PingPacket) {
                 if (!$result->isResponse()) {
-                    $this->send(PingPacket::response($result->getValue()));
+                    if (!$this->send(PingPacket::response($result->getValue()))) {
+                        throw new \RuntimeException('Cannot send pong packet.');
+                    }
+                    $this->pingReceived($result);
                 } else {
                     $this->pongReceived($result);
                 }
@@ -117,11 +120,11 @@ final class EasyDatagram extends AbstractProtocol implements PingSupportInterfac
      */
     private function unpack(string $raw)
     {
-        if (is_null($data = json_decode($raw, true))) {
-            throw new ReadException('Cannot decode json packet.');
+        if (null === ($data = json_decode($raw, true)) && json_last_error() > 0) {
+            throw new ReadException('Cannot decode json packet.', ReadException::ERROR_PROTOCOL);
         }
         if (!isset($data['type']) || !isset($data['data']) || !isset($data['id'])) {
-            throw new ReadException('Invalid packet received.');
+            throw new ReadException('Invalid packet received.', ReadException::ERROR_PROTOCOL);
         }
         switch ($data['type']) {
             case 'string':
@@ -141,7 +144,12 @@ final class EasyDatagram extends AbstractProtocol implements PingSupportInterfac
                 $data = unserialize($data['data']);
                 break;
             default:
-                throw new ReadException('Unknown packet data type "' . $data['type'] . '".');
+                throw new ReadException(
+                    sprintf(
+                        'Unknown packet data type "%s".',
+                        $data['type']
+                    ), ReadException::ERROR_PROTOCOL
+                );
         }
         return $data;
     }
@@ -151,7 +159,6 @@ final class EasyDatagram extends AbstractProtocol implements PingSupportInterfac
      *
      * @param string $dataType
      * @return int
-     * @throws SendException
      */
     private function canSend(string $dataType): int
     {
@@ -166,26 +173,43 @@ final class EasyDatagram extends AbstractProtocol implements PingSupportInterfac
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
-    public function ping(PingPacket $pingPacket)
+    public function ping(PingPacket $pingPacket): void
     {
         $this->send($pingPacket);
+    }
+
+    private $pingCallback;
+
+    /**
+     * @inheritdoc
+     */
+    public function onPingReceived(callable $pingReceived): void
+    {
+        $this->pingCallback = $pingReceived;
+    }
+
+    private function pingReceived(PingPacket $ping): void
+    {
+        if (null !== $this->pingCallback) {
+            call_user_func($this->pingCallback, $ping);
+        }
     }
 
     private $pongCallback;
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
-    public function pong(callable $pongReceived)
+    public function pong(callable $pongReceived): void
     {
         $this->pongCallback = $pongReceived;
     }
 
-    private function pongReceived(PingPacket $pong)
+    private function pongReceived(PingPacket $pong): void
     {
-        if (!is_null($this->pongCallback)) {
+        if (null !== $this->pongCallback) {
             call_user_func($this->pongCallback, $pong);
             $this->pongCallback = null;
         }

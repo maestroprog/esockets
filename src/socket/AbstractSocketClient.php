@@ -89,7 +89,7 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
         $this->eventConnect = new Event();
         $this->eventDisconnect = new Event();
 
-        if (is_null($connectionResource)) {
+        if (null === $connectionResource) {
             $this->createSocket();
         } else {
             if (get_class($this) === UdpClient::class && !$connectionResource instanceof VirtualUdpConnection) {
@@ -155,7 +155,7 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
      */
     public function getPeerAddress(): AbstractAddress
     {
-        if (is_null($this->serverAddress) || !($this->serverAddress instanceof AbstractAddress)) {
+        if (null === $this->serverAddress || !($this->serverAddress instanceof AbstractAddress)) {
             $address = $port = null;
             socket_getpeername($this->socket, $address, $port);
             if ($this->isUnixAddress() === AF_UNIX) {
@@ -172,7 +172,7 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
      */
     public function getClientAddress(): AbstractAddress
     {
-        if (is_null($this->clientAddress) || !($this->clientAddress instanceof AbstractAddress)) {
+        if (null === $this->clientAddress || !($this->clientAddress instanceof AbstractAddress)) {
             $address = $port = null;
             socket_getsockname($this->socket, $address, $port);
             if ($this->isUnixAddress() === AF_UNIX) {

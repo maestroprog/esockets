@@ -6,12 +6,13 @@ ini_set('log_errors', false);
 ini_set('display_errors', true);
 error_reporting(E_ALL);
 
-require_once __DIR__ . '/../../src/bootstrap.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 
 $configurator = new \Esockets\base\Configurator(require 'config.php');
 $httpServer = $configurator->makeServer();
-$httpServer->connect(new \Esockets\socket\Ipv4Address('0.0.0.0', '81'));
+$httpServer->connect(new \Esockets\socket\Ipv4Address('0.0.0.0', '8181'));
 $httpServer->onFound(function (Client $client) {
+    $client->unblock();
     $client->onReceive(function ($request) use ($client) {
         if ($request instanceof HttpRequest) {
             $baseDir = __DIR__ . '/www/'; // базовая директория сервера
@@ -65,7 +66,7 @@ $httpServer->onFound(function (Client $client) {
         $client->disconnect();
     });
 });
-
+$httpServer->unblock();
 for (; ;) {
     try {
         $httpServer->find();

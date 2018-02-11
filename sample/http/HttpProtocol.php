@@ -13,12 +13,12 @@ final class HttpProtocol extends AbstractProtocol
         $buffer = '';
         $read = false;
         $data = $this->provider->read($this->provider->getReadBufferSize(), false);
-        if (!is_null($data)) {
+        if (null !== $data) {
             $buffer .= $data;
             $read = true;
         }
         if ($read) {
-            list($headers, $other) = explode("\r\n\r\n", $buffer, 2);
+            $headers = explode("\r\n\r\n", $buffer, 2)[0];
             $headers = explode("\r\n", $headers);
             $i = 0;
             $requestUri = '/';

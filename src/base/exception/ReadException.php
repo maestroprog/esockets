@@ -10,9 +10,10 @@ final class ReadException extends \Exception
 
     /**
      * @param string $read
+     * @param int $code
      */
-    public function __construct($read)
+    public function __construct($read, int $code)
     {
-        parent::__construct($read);
+        parent::__construct($read, $code);
     }
 }

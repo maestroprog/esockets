@@ -59,10 +59,9 @@ final class TcpClient extends AbstractSocketClient
     public function read(int $length, bool $force)
     {
         $buffer = null;
-//        $bufferSize = 0;
         $tryCount = 0; // количество попыток чтения
-        // цикл чтения из сокета
         do {
+            // цикл чтения из сокета
             $data = null;
             $readBytes = socket_recv($this->socket, $data, $length, 0);
             if ($readBytes === false || $readBytes === 0) {
@@ -82,7 +81,7 @@ final class TcpClient extends AbstractSocketClient
                         // в общем этот кейс возникает когда нечего читать
                         return null;
                     case SocketErrorHandler::ERROR_AGAIN:
-                        if ($readBytes === 0 && is_null($data) && PHP_OS !== 'WINNT') {
+                        if ($readBytes === 0 && null === $data && PHP_OS !== 'WINNT') {
                             // for unix only
                             $this->disconnect();
                         } elseif ($tryCount++ > 10 && $length > 0) {
@@ -117,7 +116,6 @@ final class TcpClient extends AbstractSocketClient
                 $this->receivedBytes += $readBytes;
                 $this->receivedPackets++;
                 $buffer .= $data;
-//                $bufferSize += $readBytes;
                 $length -= $readBytes;
                 $tryCount = 0; // обнуляем счетчик попыток чтения
                 if ($force && $length > 0) {
@@ -145,14 +143,12 @@ final class TcpClient extends AbstractSocketClient
         $tryCount = 0;
         $length = strlen($data);
         $written = $length; // учет количества отправленных байт
-        // цикл отправки в сокет
         do {
+            // цикл отправки в сокет
             $wrote = socket_send($this->socket, $data, $length, 0);
             if ($wrote === false) {
                 // если отправить не удалось - получим и обработем ошибку
-                $errorLevel = $this->errorHandler->getErrorLevel(
-                    self::OP_WRITE
-                );
+                $errorLevel = $this->errorHandler->getErrorLevel(self::OP_WRITE);
                 switch ($errorLevel) {
                     case SocketErrorHandler::ERROR_NOTHING:
                     case SocketErrorHandler::ERROR_SKIP:
@@ -179,7 +175,6 @@ final class TcpClient extends AbstractSocketClient
                         );
                 }
             } elseif ($wrote === 0) {
-                // todo
                 if ($tryCount++ > 10) {
                     throw new \RuntimeException('Sending failed!');
                 }

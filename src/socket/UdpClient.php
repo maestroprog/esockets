@@ -69,16 +69,12 @@ final class UdpClient extends AbstractSocketClient
     {
         $buffer = null;
         if ($this->connectionResource instanceof VirtualUdpConnection) {
-            try {
-                $buffer = $this->connectionResource->read();
-            } catch (ReadException $e) {
-                $this->disconnect();
-            } finally {
-                $dataLength = strlen($buffer);
-                $this->receivedBytes += $dataLength;
-                $this->receivedPackets++;
-                return $buffer;
-            }
+            $buffer = $this->connectionResource->read();
+            $dataLength = strlen($buffer);
+            $this->receivedBytes += $dataLength;
+            $this->receivedPackets++;
+
+            return $buffer;
         } else {
             $address = null;
             $port = 0;
@@ -93,7 +89,7 @@ final class UdpClient extends AbstractSocketClient
                 }
                 if (!$this->getPeerAddress()->equalsTo($address)) {
                     // если вдруг в сокет придёт дейтаграмма с левого адреса
-                    throw new ReadException('Unknown peer: ' . $address);
+                    throw new ReadException('Unknown peer: ' . $address, ReadException::ERROR_FAIL);
                 }
                 $dataLength = strlen($buffer);
                 $this->receivedBytes += $dataLength;
@@ -124,10 +120,11 @@ final class UdpClient extends AbstractSocketClient
             $address = $this->serverAddress->getIp();
             $port = $this->serverAddress->getPort();
         }
-        $wrote = socket_sendto($this->socket, $data, strlen($data), 0, $address, $port);
+        $length = strlen($data);
+        $wrote = socket_sendto($this->socket, $data, $length, 0, $address, $port);
         if ($wrote === false) {
             return false;
-        } elseif ($wrote === 0) {
+        } elseif ($wrote === 0 || $wrote < $length) {
             throw new SendException('Not transmitted!');
         }
         $this->transmittedBytes += $wrote;

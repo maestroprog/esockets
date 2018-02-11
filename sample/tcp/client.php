@@ -2,7 +2,7 @@
 
 use Esockets\debug\Log as _;
 
-require __DIR__ . '/../../src/bootstrap.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 _::setEnv('client');
 

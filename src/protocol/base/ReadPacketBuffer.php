@@ -119,7 +119,6 @@ class ReadPacketBuffer implements PacketBufferInterface
             }
             $ne++;
             if ($data['time'] < time() - self::READ_TIMEOUT) {
-//                var_dump('timeout', $data['try']);
                 // устанавливаем количество попыток
                 if (isset($data['try'])) {
                     if ($data['try'] > 10) {

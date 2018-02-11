@@ -70,22 +70,14 @@ final class EasyStream extends AbstractProtocol implements PingSupportInterface
     public function returnRead()
     {
         $result = null;
-        $readAttempt = false;
 
-//        var_dump($this->provider->getReadBufferSize());
         do {
             // пытаемся прочитать данные
 
             $readData = $this->provider->read($this->provider->getReadBufferSize(), false);
-//        Log::dumpHexString($readData);
-            if (!is_null($readData)) {
+            if (null !== $readData) {
                 // буферизация прочитанных пакетов
                 $this->readBuffer .= $readData;
-            } elseif ($readAttempt) {
-                // чтобы избежать зацикливания, выходим, если уже была попытка чтения,
-//                break;
-            } else {
-                $readAttempt = true; // TODO ВНИМАНИЕ
             }
             $bufferSize = strlen($this->readBuffer);
             if ($bufferSize > self::SHORT_HEADER_SIZE) {
@@ -94,17 +86,13 @@ final class EasyStream extends AbstractProtocol implements PingSupportInterface
                 $flag = unpack('Cflag', substr($this->readBuffer, 0, 1))['flag'];
                 if ($flag & self::SHORT_PACKET) {
                     // если пакет является коротким
-                    $size = unpack(
-                        'Csize',
-                        substr($this->readBuffer, 1, self::SHORT_HEADER_SIZE - 1)
-                    )['size'];
+                    $sizeHead = substr($this->readBuffer, 1, self::SHORT_HEADER_SIZE - 1);
+                    $size = unpack('Csize', $sizeHead)['size'];
                     $headerSize = self::SHORT_HEADER_SIZE;
                 } else {
                     // если пакет обычный
-                    $size = unpack(
-                        'Nsize',
-                        substr($this->readBuffer, 1, self::HEADER_SIZE - 1)
-                    )['size'];
+                    $sizeHead = substr($this->readBuffer, 1, self::HEADER_SIZE - 1);
+                    $size = unpack('Nsize', $sizeHead)['size'];
                     $headerSize = self::HEADER_SIZE;
                 }
                 $size += 1; // добавляем 1, т.к. счёт размера данных начинается с 0.
@@ -115,13 +103,7 @@ final class EasyStream extends AbstractProtocol implements PingSupportInterface
                     // попробуем дочитать необходимое кол-во данных
                     $appendBuffer = $this->provider->read($needRead, true);
                     $this->readBuffer .= $appendBuffer;
-                    if (strlen($appendBuffer) === $needRead) {
-                        // если необходимое количество данных прочитано успешно
-                        // возвращаемся к началу цикла и перечитываем буфер
-//                        continue;
-                    } else {
-                        // иначе кидаем исключение
-//                        break;
+                    if (strlen($appendBuffer) !== $needRead) {
                         throw new ReadException(
                             sprintf('Not enough length: %d bytes', $needRead - strlen($appendBuffer)),
                             ReadException::ERROR_FAIL
@@ -136,12 +118,15 @@ final class EasyStream extends AbstractProtocol implements PingSupportInterface
 
                 // распакуем данные
                 $result = $this->unpack($data, $flag);
-                if (is_null($result)) {
+                if (null === $result) {
                     // если не удалось распаковать - исключение
                     throw new SendException('Data packet is corrupted.');
                 } elseif ($result instanceof PingPacket) {
                     if (!$result->isResponse()) {
-                        $this->send(PingPacket::response($result->getValue()));
+                        if (!$this->send(PingPacket::response($result->getValue()))) {
+                            throw new \RuntimeException('Cannot send pong packet.');
+                        }
+                        $this->pingReceived($result);
                     } else {
                         $this->pongReceived($result);
                     }
@@ -232,7 +217,7 @@ final class EasyStream extends AbstractProtocol implements PingSupportInterface
     {
         $data = null;
         if ($flag & self::DATA_STRING) {
-            $data = $raw; // simple string
+            $data = $raw;
         } elseif ($flag & self::DATA_INT) {
             $data = (int)$raw;
         } elseif ($flag & self::DATA_FLOAT) {
@@ -269,16 +254,7 @@ final class EasyStream extends AbstractProtocol implements PingSupportInterface
                 $flag = self::DATA_ARRAY;
                 break;
             case 'object':
-                /*if ($data instanceof PingPacket) {
-                    $flag = self::DATA_INT | self::DATA_PING_PONG;
-                    if (!$data->isResponse()) {
-                        $flag |= self::DATA_CONTROL;
-                    }
-                    $data = $data->getValue();
-                } else {*/
                 $flag = self::DATA_OBJECT;
-//                throw new SendException('Values of type Object cannot be transmitted on current Net version.');
-                /*}*/
                 break;
             case 'resource':
                 throw new SendException('Values of type Resource cannot be transmitted on current Net version.');
@@ -293,26 +269,43 @@ final class EasyStream extends AbstractProtocol implements PingSupportInterface
     }
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
-    public function ping(PingPacket $pingPacket)
+    public function ping(PingPacket $pingPacket): void
     {
         $this->send($pingPacket);
+    }
+
+    private $pingCallback;
+
+    /**
+     * @inheritdoc
+     */
+    public function onPingReceived(callable $pingReceived): void
+    {
+        $this->pingCallback = $pingReceived;
+    }
+
+    private function pingReceived(PingPacket $ping): void
+    {
+        if (null !== $this->pingCallback) {
+            call_user_func($this->pingCallback, $ping);
+        }
     }
 
     private $pongCallback;
 
     /**
-     * @inheritDoc
+     * @inheritdoc
      */
-    public function pong(callable $pongReceived)
+    public function pong(callable $pongReceived): void
     {
         $this->pongCallback = $pongReceived;
     }
 
-    private function pongReceived(PingPacket $pong)
+    private function pongReceived(PingPacket $pong): void
     {
-        if (!is_null($this->pongCallback)) {
+        if (null !== $this->pongCallback) {
             call_user_func($this->pongCallback, $pong);
             $this->pongCallback = null;
         }

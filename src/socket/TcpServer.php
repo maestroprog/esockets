@@ -229,7 +229,7 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
                 // todo ?
             }
             foreach ($except as $exceptConnection) {
-                // todo
+                // todo ?
             }
         }
         foreach ($connectionsIndex as $client) {

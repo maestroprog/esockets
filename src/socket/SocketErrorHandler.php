@@ -40,9 +40,13 @@ final class SocketErrorHandler
 
     private $socket;
 
+    /**
+     * @param null $socket
+     * @throws ConnectionException
+     */
     public function __construct($socket = null)
     {
-        if (!is_null($socket)) {
+        if (null !== $socket) {
             if (!is_resource($socket)) {
                 throw new ConnectionException('Socket don\'t is resource');
             } elseif (get_resource_type($socket) !== 'Socket') {
@@ -53,6 +57,10 @@ final class SocketErrorHandler
         $this->checkConstants();
     }
 
+    /**
+     * @param $socket
+     * @throws ConnectionException
+     */
     public function setSocket($socket)
     {
         if (!is_resource($socket)) {
@@ -114,6 +122,9 @@ final class SocketErrorHandler
         }
     }
 
+    /**
+     * @throws ConnectionException
+     */
     public function handleError()
     {
         if (is_resource($this->socket)) {

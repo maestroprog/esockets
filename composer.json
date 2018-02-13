@@ -25,8 +25,5 @@
       "Esockets\\": "src"
     }
   },
-  "require-dev": {
-    "phpunit/phpunit" : "*"
-  },
   "repositories": []
 }

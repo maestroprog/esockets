@@ -2,41 +2,49 @@
 
 namespace Esockets;
 
-use Esockets\base\AbstractAddress;
-use Esockets\base\AbstractClient;
-use Esockets\base\AbstractConnectionResource;
-use Esockets\base\AbstractProtocol;
-use Esockets\base\BlockingInterface;
-use Esockets\base\CallbackEventListener;
-use Esockets\base\ConnectorInterface;
-use Esockets\base\PingPacket;
-use Esockets\base\PingSupportInterface;
-use Esockets\base\ReaderInterface;
-use Esockets\base\SenderInterface;
+use Esockets\Base\AbstractAddress;
+use Esockets\Base\AbstractClient;
+use Esockets\Base\AbstractConnectionResource;
+use Esockets\Base\AbstractProtocol;
+use Esockets\Base\BlockingInterface;
+use Esockets\Base\CallbackEventListener;
+use Esockets\Base\ConnectorInterface;
+use Esockets\Base\Exception\SendException;
+use Esockets\Base\PingPacket;
+use Esockets\Base\PingSupportInterface;
+use Esockets\Base\ReaderInterface;
+use Esockets\Base\SenderInterface;
 
 /**
  * Враппер над связкой протокол-клиент.
  */
 class Client implements ConnectorInterface, ReaderInterface, SenderInterface, BlockingInterface
 {
+    protected const TIME_LAST_CHECK = 'last_check';
+    protected const TIME_LAST_PING = 'last_ping';
+    protected const TIME_LAST_RECONNECT = 'last_reconnect';
+
     private $connection;
     private $protocol;
-
-    private $timeout = 30;
-    private $pingInterval = 5;
-    private $reconnectInterval = 1;
-    private $reconnectSupport = false;
-
-    const TIME_LAST_CHECK = 'last_check'; // время успешной работы соединения
-    const TIME_LAST_PING = 'last_ping'; // время последнего пинга
-    const TIME_LAST_RECONNECT = 'last_reconnect'; // время последней попытки реконнекта
-
+    private $timeout;
+    private $pingInterval; // время успешной работы соединения
+    private $reconnectInterval; // время последнего пинга
+    private $reconnectSupport = false; // время последней попытки реконнекта
     private $times = [];
 
-    public function __construct(AbstractClient $connection, AbstractProtocol $protocol)
+    public function __construct(
+        AbstractClient $connection,
+        AbstractProtocol $protocol,
+        int $timeout,
+        int $pingInterval,
+        int $reconnectInterval
+    )
     {
         $this->connection = $connection;
         $this->protocol = $protocol;
+        $this->timeout = $timeout;
+        $this->pingInterval = $pingInterval;
+        $this->reconnectInterval = $reconnectInterval;
 
         $this->resetTime();
         $this->protocol->onReceive(function () {
@@ -63,7 +71,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
     /**
      * @inheritdoc
      */
-    public function connect(AbstractAddress $address)
+    public function connect(AbstractAddress $address): void
     {
         $this->connection->connect($address);
         $this->reconnectSupport = true;
@@ -88,15 +96,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
     /**
      * @inheritdoc
      */
-    public function isConnected(): bool
-    {
-        return $this->connection->isConnected();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function disconnect()
+    public function disconnect(): void
     {
         $this->connection->disconnect();
     }
@@ -117,12 +117,33 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
         return $this->connection->getConnectionResource();
     }
 
+    public function ready(): bool
+    {
+        if (!$this->isConnected()) {
+            return false;
+        }
+
+        return $this->connection->ready();
+    }
+
     /**
      * @inheritdoc
      */
     public function read(): bool
     {
-        return $this->protocol->read();
+        if (!$this->isConnected()) {
+            return false;
+        }
+
+        try {
+            return $this->protocol->read();
+        } catch (SendException $e) {
+            if ($this->isConnected()) {
+                $this->disconnect();
+            }
+
+            return false;
+        }
     }
 
     /**
@@ -130,6 +151,10 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
      */
     public function returnRead()
     {
+        if (!$this->isConnected()) {
+            return false;
+        }
+
         return $this->protocol->returnRead();
     }
 
@@ -146,6 +171,9 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
      */
     public function send($data): bool
     {
+        if (!$this->isConnected()) {
+            return false;
+        }
         return $this->protocol->send($data);
     }
 
@@ -172,7 +200,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
     /**
      * @inheritdoc
      */
-    public function block()
+    public function block(): void
     {
         if ($this->connection instanceof BlockingInterface) {
             $this->connection->block();
@@ -182,7 +210,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
     /**
      * @inheritdoc
      */
-    public function unblock()
+    public function unblock(): void
     {
         if ($this->connection instanceof BlockingInterface) {
             $this->connection->unblock();
@@ -225,6 +253,8 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
             if ($this->getTime(self::TIME_LAST_RECONNECT) + $this->reconnectInterval <= $time) {
                 if ($this->reconnect()) {
                     $this->resetTime();
+                } else {
+                    sleep($this->reconnectInterval);
                 }
             } else {
                 $this->resetTime(self::TIME_LAST_RECONNECT);
@@ -233,7 +263,21 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
         } else {
             $alive = false;
         }
+
         return $alive;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function isConnected(): bool
+    {
+        return $this->connection->isConnected();
+    }
+
+    protected function getTime(string $key = self::TIME_LAST_CHECK): int
+    {
+        return $this->times[$key] ?? 0;
     }
 
     protected function ping()
@@ -251,14 +295,7 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
                 }
             });
             $this->protocol->ping($pingRequest);
-        } else {
-//            throw new \LogicException('Protocol "' . get_class($this->protocol) . '" has no support ping.');
         }
-    }
-
-    protected function getTime(string $key = self::TIME_LAST_CHECK): int
-    {
-        return $this->times[$key] ?? 0;
     }
 
     protected function resetTime(string $key = self::TIME_LAST_CHECK)

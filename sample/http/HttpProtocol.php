@@ -1,7 +1,7 @@
 <?php
 
-use Esockets\base\AbstractProtocol;
-use Esockets\base\CallbackEventListener;
+use Esockets\Base\AbstractProtocol;
+use Esockets\Base\CallbackEventListener;
 
 final class HttpProtocol extends AbstractProtocol
 {

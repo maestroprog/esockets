@@ -4,15 +4,14 @@ use Esockets\Client;
 
 ini_set('log_errors', false);
 ini_set('display_errors', true);
-error_reporting(E_ALL);
+error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-$configurator = new \Esockets\base\Configurator(require 'config.php');
+$configurator = new \Esockets\Base\Configurator(require 'config.php');
 $httpServer = $configurator->makeServer();
-$httpServer->connect(new \Esockets\socket\Ipv4Address('0.0.0.0', '8181'));
+$httpServer->connect(new \Esockets\Socket\Ipv4Address('0.0.0.0', '8181'));
 $httpServer->onFound(function (Client $client) {
-    $client->unblock();
     $client->onReceive(function ($request) use ($client) {
         if ($request instanceof HttpRequest) {
             $baseDir = __DIR__ . '/www/'; // базовая директория сервера
@@ -31,6 +30,7 @@ $httpServer->onFound(function (Client $client) {
             if (!file_exists($path)) {
                 $response = new HttpResponse(404, 'Not found', '<h1>Not found</h1><p>' . $uri . '</p>');
             } else {
+                $time = microtime(true);
                 $extension = pathinfo($path, PATHINFO_EXTENSION);
                 if ($extension === 'php') {
                     ob_start();
@@ -52,6 +52,7 @@ $httpServer->onFound(function (Client $client) {
                     }
                     $body = file_get_contents($path);
                 }
+                $body .= '<div>exec ' . (microtime(true) - $time) . '</div>';
                 $response = new HttpResponse(
                     200,
                     'OK',

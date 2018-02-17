@@ -1,19 +1,28 @@
 <?php
 
-use Esockets\debug\Log as _;
+use Esockets\Debug\Log as _;
 
 require __DIR__ . '/../../vendor/autoload.php';
 
 _::setEnv('client');
 
-$configurator = new \Esockets\base\Configurator(require 'config.php');
+$work = true;
+
+if (extension_loaded('pcntl')) {
+    pcntl_signal(SIGINT, function (int $signo) use (&$work) {
+        $work = false;
+        _::log('Обработал сигнал: ' . $signo);
+    }, false);
+}
+
+$configurator = new \Esockets\Base\Configurator(require 'config.php');
 
 $client = $configurator->makeClient();
 
 try {
-    $client->connect(new \Esockets\socket\Ipv4Address('127.0.0.1', '8081'));
+    $client->connect(new \Esockets\Socket\Ipv4Address('127.0.0.1', '8081'));
     _::log('Успешно соединился!');
-} catch (\Esockets\base\exception\ConnectionException $e) {
+} catch (\Esockets\Base\Exception\ConnectionException $e) {
     _::log('Не соединился');
     return;
 }
@@ -23,11 +32,22 @@ $client->onDisconnect(function () {
 $client->onReceive(function ($msg) use ($client) {
     _::log('Получил сообщение от сервера: "' . $msg . '"');
 });
-
 $client->send('Hello!');
-while ($client->live()) {
-    $client->read();
-    sleep(1);
+stream_set_blocking(STDIN, 0);
+while ($work && $client->live()) {
+    if ($client->ready()) {
+        $client->read();
+        usleep(10000);
+    } else {
+        sleep(1);
+    }
+    if ($in = fgets(STDIN)) {
+        $client->send($in);
+        usleep(10000);
+    }
+    if (extension_loaded('pcntl')) {
+        pcntl_signal_dispatch();
+    }
 }
 
 $client->disconnect();

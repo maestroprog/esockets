@@ -1,7 +1,7 @@
 <?php
 
-use Esockets\base\Configurator;
-use Esockets\socket\SocketFactory;
+use Esockets\Base\Configurator;
+use Esockets\Socket\SocketFactory;
 
 require_once 'HttpProtocol.php';
 require_once 'HttpRequest.php';

@@ -1,7 +1,7 @@
 <?php
 
-use Esockets\base\AbstractProtocol;
-use Esockets\base\CallbackEventListener;
+use Esockets\Base\AbstractProtocol;
+use Esockets\Base\CallbackEventListener;
 
 final class HttpProtocol extends AbstractProtocol
 {
@@ -25,11 +25,7 @@ final class HttpProtocol extends AbstractProtocol
             $parsedHeaders = [];
             foreach ($headers as $header) {
                 if ($i === 0) {
-                    $matches = [];
-                    $uri = null;
-                    if (preg_match('/^([^\s]{1,})\s{1,}([^\s]{1,})\s{1,}([^\s]{1,})$/', trim($header), $matches)) {
-                        list($header, $method, $uri, $version) = $matches;
-                    }
+                    $uri = explode(' ', str_replace('  ', ' ', $header))[1] ?? null;
                     if ($uri) {
                         $requestUri = $uri;
                     }

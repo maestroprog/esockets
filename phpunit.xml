@@ -1,7 +1,0 @@
-<phpunit bootstrap="src/bootstrap.php">
-    <testsuites>
-        <testsuite name="esockets-test">
-            <!--<file>tests/Server.php</file>-->
-        </testsuite>
-    </testsuites>
-</phpunit>

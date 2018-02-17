@@ -1,7 +1,7 @@
 <?php
 
-use Esockets\base\Configurator;
-use Esockets\socket\SocketFactory;
+use Esockets\Base\Configurator;
+use Esockets\Socket\SocketFactory;
 
 require_once __DIR__ . '/../vendor/autoload.php'; // подключаем автолоадер
 
@@ -13,20 +13,20 @@ $config = [
         SocketFactory::SOCKET_DOMAIN => AF_INET, // домен сокета
         SocketFactory::SOCKET_PROTOCOL => SOL_TCP, // используемый транспортный протокол
     ],
-    Configurator::PROTOCOL_CLASS => \Esockets\protocol\EasyStream::class, // используемый прикладной протокол
+    Configurator::PROTOCOL_CLASS => \Esockets\Protocol\EasyStream::class, // используемый прикладной протокол
 ];
 
 // будем слушать порт 8081 на localhost-е
-$listenAddress = new \Esockets\socket\Ipv4Address('127.0.0.1', 8081);
+$listenAddress = new \Esockets\Socket\Ipv4Address('127.0.0.1', 8081);
 
-$configurator = new \Esockets\base\Configurator($config); // инициализируем фабрику
+$configurator = new \Esockets\Base\Configurator($config); // инициализируем фабрику
 
 $server = $configurator->makeServer(); // производим настроенный объект сервера с сокетом внутри
 $server->block(); // устанавливаем блокирующий режим работы сервера
 try {
     $server->connect($listenAddress); // заставляем сервер слушать указанный ip и порт
     echo 'Сервер слушает ' . $listenAddress, PHP_EOL;
-} catch (\Esockets\base\exception\ConnectionException $e) {
+} catch (\Esockets\Base\Exception\ConnectionException $e) {
     echo 'Не удалось запустить сервер!', PHP_EOL;
     return;
 }
@@ -48,7 +48,7 @@ $client->block(); // устанавливаем блокирующий режи�
 try {
     $client->connect($listenAddress); // заставляем клиента подключиться к серверу по указанному адресу
     echo 'Клиент успешно соединился!', PHP_EOL;
-} catch (\Esockets\base\exception\ConnectionException $e) {
+} catch (\Esockets\Base\Exception\ConnectionException $e) {
     echo 'Клиент не смог подключиться!', PHP_EOL;
     return;
 }

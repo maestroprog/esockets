@@ -1,7 +1,9 @@
 <?php
 
-use Esockets\base\Configurator;
-use Esockets\socket\SocketFactory;
+use Esockets\Base\Configurator;
+use Esockets\Debug\LoggingProtocol;
+use Esockets\Protocol\EasyStream;
+use Esockets\Socket\SocketFactory;
 
 return [
     Configurator::CONNECTION_TYPE => Configurator::CONNECTION_TYPE_SOCKET,
@@ -9,5 +11,6 @@ return [
         SocketFactory::SOCKET_DOMAIN => AF_INET,
         SocketFactory::SOCKET_PROTOCOL => SOL_TCP,
     ],
-    Configurator::PROTOCOL_CLASS => \Esockets\protocol\EasyStream::class,
+    Configurator::PROTOCOL_CLASS => LoggingProtocol::withRealProtocolClass(EasyStream::class),
+    Configurator::PING_INTERVAL => 30,
 ];

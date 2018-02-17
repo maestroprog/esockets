@@ -2,15 +2,15 @@
 
 namespace Esockets;
 
-use Esockets\base\AbstractAddress;
-use Esockets\base\AbstractConnectionResource;
-use Esockets\base\AbstractServer;
-use Esockets\base\BlockingInterface;
-use Esockets\base\BroadcastingInterface;
-use Esockets\base\CallbackEventListener;
-use Esockets\base\Event;
-use Esockets\base\Configurator;
-use Esockets\base\HasClientsContainer;
+use Esockets\Base\AbstractAddress;
+use Esockets\Base\AbstractConnectionResource;
+use Esockets\Base\AbstractServer;
+use Esockets\Base\BlockingInterface;
+use Esockets\Base\BroadcastingInterface;
+use Esockets\Base\CallbackEventListener;
+use Esockets\Base\Configurator;
+use Esockets\Base\Event;
+use Esockets\Base\HasClientsContainer;
 
 /**
  * Обёртка над серверным соединением.
@@ -43,7 +43,7 @@ class Server extends AbstractServer implements
     /**
      * @inheritdoc
      */
-    public function connect(AbstractAddress $address)
+    public function connect(AbstractAddress $address): void
     {
         $this->server->connect($address);
     }
@@ -75,7 +75,7 @@ class Server extends AbstractServer implements
     /**
      * @inheritdoc
      */
-    public function disconnect()
+    public function disconnect(): void
     {
         $this->server->disconnect();
     }
@@ -99,7 +99,7 @@ class Server extends AbstractServer implements
     /**
      * @inheritdoc
      */
-    public function disconnectAll()
+    public function disconnectAll(): void
     {
         if (!$this->server instanceof HasClientsContainer) {
             throw new \LogicException('Server does not have clients container.');
@@ -129,7 +129,7 @@ class Server extends AbstractServer implements
     /**
      * @inheritdoc
      */
-    public function find()
+    public function find(): void
     {
         $this->server->find();
     }
@@ -160,7 +160,7 @@ class Server extends AbstractServer implements
     /**
      * @inheritdoc
      */
-    public function block()
+    public function block(): void
     {
         if ($this->server instanceof BlockingInterface) {
             $this->server->block();
@@ -170,7 +170,7 @@ class Server extends AbstractServer implements
     /**
      * @inheritdoc
      */
-    public function unblock()
+    public function unblock(): void
     {
         if ($this->server instanceof BlockingInterface) {
             $this->server->unblock();

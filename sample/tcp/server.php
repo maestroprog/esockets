@@ -1,19 +1,19 @@
 <?php
 
-use Esockets\debug\Log as _;
+use Esockets\Debug\Log as _;
 
 set_time_limit(0);
 require __DIR__ . '/../../vendor/autoload.php';
 
 _::setEnv('server');
 
-$configurator = new \Esockets\base\Configurator(require 'config.php');
+$configurator = new \Esockets\Base\Configurator(require 'config.php');
 
 $server = $configurator->makeServer();
 try {
-    $server->connect(new \Esockets\socket\Ipv4Address('127.0.0.1', 8081));
+    $server->connect(new \Esockets\Socket\Ipv4Address('127.0.0.1', 8081));
     _::log('Сервер слушает сокет');
-} catch (\Esockets\base\exception\ConnectionException $e) {
+} catch (\Esockets\Base\Exception\ConnectionException $e) {
     _::log('Не удалось запустить сервер!');
     return;
 }
@@ -41,8 +41,6 @@ if (extension_loaded('pcntl')) {
 while ($work) {
 
     $server->find(); // слушаем новые соединения
-
-    usleep(10000); // sleep for 10 ms
     if (extension_loaded('pcntl')) {
         pcntl_signal_dispatch();
     }

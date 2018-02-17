@@ -4,33 +4,69 @@ use Esockets\Client;
 
 ini_set('log_errors', false);
 ini_set('display_errors', true);
-error_reporting(E_ALL);
+error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-$configurator = new \Esockets\base\Configurator(require 'config.php');
+$configurator = new \Esockets\Base\Configurator(require 'config.php');
 $httpServer = $configurator->makeServer();
-$httpServer->connect(new \Esockets\socket\Ipv4Address('0.0.0.0', '8181'));
-$httpServer->onFound(function (Client $client) {
-    $client->unblock();
-    $client->onReceive(function ($request) use ($client) {
+$httpServer->connect(new \Esockets\Socket\Ipv4Address('0.0.0.0', '8181'));
+$fork = pcntl_fork();
+cli_set_process_title('PHP Fork ' . $fork);
+$fork = pcntl_fork();
+cli_set_process_title('PHP Fork ' . $fork);
+
+$fileLoader = new class
+{
+    private $existsCache = [];
+    private $cache;
+
+    /**
+     * @inheritDoc
+     */
+    public function __construct()
+    {
+        $this->cache = [];
+    }
+
+    public function existFile(string $path): bool
+    {
+        if (isset($this->existsCache[$path])) {
+            $exists = $this->existsCache[$path];
+
+            if ($exists) {
+                return true;
+            }
+        }
+        return $this->existsCache[$path] = file_exists($path);
+    }
+
+    public function loadFile(string $path): string
+    {
+        if (isset($this->cache[$path])) {
+            return $this->cache[$path];
+        }
+        return $this->cache[$path] = file_get_contents($path);
+    }
+};
+
+$httpServer->onFound(function (Client $client) use ($fileLoader) {
+    $client->onReceive(function ($request) use ($client, $fileLoader) {
         if ($request instanceof HttpRequest) {
             $baseDir = __DIR__ . '/www/'; // базовая директория сервера
             // декодируем url закодированную строку URI, обрезаем пробельные символы, и обрезаем слеш в начале
             // а также убираем все небезопасные символы из строки
-            $uri = preg_replace(
-                '/[^\w\-\/\.]/',
-                '',
-                ltrim(trim(rawurldecode($request->getRequestUri())), '/')
-            );
+            $parsed = parse_url(ltrim(trim(rawurldecode($request->getRequestUri())), '/'));
+            $uri = $parsed['path'];
             if (empty($uri)) {
                 $uri = 'index.html';
             }
             $mime = 'text/html';
             $path = $baseDir . $uri;
-            if (!file_exists($path)) {
+            if (!$fileLoader->existFile($path)) {
                 $response = new HttpResponse(404, 'Not found', '<h1>Not found</h1><p>' . $uri . '</p>');
             } else {
+                $time = microtime(true);
                 $extension = pathinfo($path, PATHINFO_EXTENSION);
                 if ($extension === 'php') {
                     ob_start();
@@ -48,10 +84,11 @@ $httpServer->onFound(function (Client $client) {
                             $mime = 'text/css';
                             break;
                         default:
-                            $mime = mime_content_type($path);
+//                            $mime = mime_content_type($path);
                     }
-                    $body = file_get_contents($path);
+                    $body = $fileLoader->loadFile($path);
                 }
+                $body .= '<div>exec ' . (microtime(true) - $time) . '</div>';
                 $response = new HttpResponse(
                     200,
                     'OK',

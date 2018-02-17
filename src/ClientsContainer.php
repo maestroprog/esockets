@@ -2,11 +2,11 @@
 
 namespace Esockets;
 
-use Esockets\base\AbstractAddress;
-use Esockets\base\BroadcastingInterface;
-use Esockets\base\CallbackEventListener;
-use Esockets\base\Event;
-use Esockets\base\ClientsContainerInterface;
+use Esockets\Base\AbstractAddress;
+use Esockets\Base\BroadcastingInterface;
+use Esockets\Base\CallbackEventListener;
+use Esockets\Base\ClientsContainerInterface;
+use Esockets\Base\Event;
 
 /**
  * Серверный контейнер клиентских соединений.
@@ -30,7 +30,7 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
     /**
      * @inheritdoc
      */
-    public function add(Client $client)
+    public function add(Client $client): void
     {
         $this->clients[$client->getPeerAddress()->__toString()] = $client;
         $client->onDisconnect(function () use ($client) {
@@ -41,7 +41,7 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
     /**
      * @inheritdoc
      */
-    public function remove(Client $client)
+    public function remove(Client $client): void
     {
         $key = $client->getPeerAddress()->__toString();
         if (!isset($this->clients[$key])) {
@@ -91,7 +91,7 @@ class ClientsContainer implements ClientsContainerInterface, BroadcastingInterfa
     /**
      * @inheritdoc
      */
-    public function disconnectAll()
+    public function disconnectAll(): void
     {
         array_walk($this->clients, function (Client $client) {
             $client->disconnect();

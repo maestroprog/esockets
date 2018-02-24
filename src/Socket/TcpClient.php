@@ -147,7 +147,7 @@ final class TcpClient extends AbstractSocketClient
     public function send($data): bool
     {
         if (!$this->connected) {
-            return null;
+            return false;
         }
         $tryCount = 0;
         $length = strlen($data);

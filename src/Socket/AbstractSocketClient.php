@@ -40,6 +40,8 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     protected $transmittedBytes = 0;
     protected $transmittedPackets = 0;
 
+    protected $blocked = true;
+
     /**
      * Приватный конструктор.
      *
@@ -242,14 +244,6 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     /**
      * @inheritdoc
      */
-    public function block(): void
-    {
-        socket_set_block($this->socket);
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function onConnect(callable $callback): CallbackEventListener
     {
         return $this->eventConnect->attachCallbackListener($callback);
@@ -274,9 +268,27 @@ abstract class AbstractSocketClient extends AbstractClient implements BlockingIn
     /**
      * @inheritdoc
      */
+    public function block(): void
+    {
+        $this->blocked = true;
+        socket_set_block($this->socket);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function unblock(): void
     {
+        $this->blocked = false;
         socket_set_nonblock($this->socket);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function isBlocked(): bool
+    {
+        return $this->blocked;
     }
 
     /**

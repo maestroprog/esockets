@@ -70,9 +70,7 @@ final class TcpClient extends AbstractSocketClient
             $readBytes = socket_recv($this->socket, $data, $length, 0);
             if ($readBytes === false || $readBytes === 0) {
                 // если не удалось прочитать начинаем обрабатывать возникшую ошибку
-                $errorType = $this->errorHandler->getErrorLevel(
-                    self::OP_READ
-                );
+                $errorType = $this->errorHandler->getErrorLevel(self::OP_READ);
                 switch ($errorType) {
                     case SocketErrorHandler::ERROR_NOTHING:
 //                        if (PHP_OS === 'WINNT') {

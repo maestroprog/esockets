@@ -176,4 +176,16 @@ class Server extends AbstractServer implements
             $this->server->unblock();
         }
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function isBlocked(): bool
+    {
+        if ($this->server instanceof BlockingInterface) {
+            return $this->server->isBlocked();
+        }
+
+        return false;
+    }
 }

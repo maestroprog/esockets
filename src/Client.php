@@ -217,6 +217,15 @@ class Client implements ConnectorInterface, ReaderInterface, SenderInterface, Bl
         }
     }
 
+    public function isBlocked(): bool
+    {
+        if ($this->connection instanceof BlockingInterface) {
+            return $this->connection->isBlocked();
+        }
+
+        return false;
+    }
+
     /**
      * Поддерживает жизнь соединения.
      * Что делает:

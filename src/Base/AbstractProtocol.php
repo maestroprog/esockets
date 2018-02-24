@@ -29,7 +29,11 @@ abstract class AbstractProtocol implements ReaderInterface, SenderInterface
     public function read(): bool
     {
         try {
-            if (null !== ($data = $this->returnRead())) {
+            if ($this->provider instanceof BlockingInterface && !$this->provider->isBlocked()) {
+                while (null !== ($data = $this->returnRead())) {
+                    $this->eventReceive->call($data);
+                }
+            } elseif (null !== ($data = $this->returnRead())) {
                 $this->eventReceive->call($data);
             }
 

@@ -8,6 +8,8 @@ error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
+\Esockets\Debug\Log::setEnv('HTTP_SERVER');
+
 $configurator = new \Esockets\Base\Configurator(require 'config.php');
 $httpServer = $configurator->makeServer();
 $httpServer->connect(new \Esockets\Socket\Ipv4Address('0.0.0.0', '8181'));

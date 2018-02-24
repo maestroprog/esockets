@@ -41,6 +41,8 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     private $eventDisconnect;
     private $eventFound;
 
+    private $blocked = true;
+
     /**
      * @param int $socketDomain Домен сокета
      * @param int $maxConn Максимальное количество соединений в очереди (параметр backlog)
@@ -129,14 +131,6 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     /**
      * @inheritdoc
      */
-    public function block(): void
-    {
-        socket_set_block($this->socket);
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function connect(AbstractAddress $listenAddress): void
     {
         $this->listenAddress = $listenAddress;
@@ -172,9 +166,27 @@ final class TcpServer extends AbstractServer implements BlockingInterface, HasCl
     /**
      * @inheritdoc
      */
+    public function block(): void
+    {
+        $this->blocked = true;
+        socket_set_block($this->socket);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function unblock(): void
     {
+        $this->blocked = false;
         socket_set_nonblock($this->socket);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function isBlocked(): bool
+    {
+        return $this->blocked;
     }
 
     /**

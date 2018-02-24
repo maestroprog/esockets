@@ -144,6 +144,14 @@ class TcpStreamClient extends AbstractClient implements BlockingInterface
     }
 
     /**
+     * @inheritdoc
+     */
+    public function isBlocked(): bool
+    {
+        // TODO: Implement isBlocked() method.
+    }
+
+    /**
      * @inheritDoc
      */
     public function getReceivedBytesCount(): int

@@ -20,4 +20,6 @@ interface BlockingInterface
      * @return void
      */
     public function unblock(): void;
+
+    public function isBlocked(): bool;
 }

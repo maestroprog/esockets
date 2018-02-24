@@ -38,6 +38,8 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
     private $eventDisconnect;
     private $eventFound;
 
+    private $blocked = true;
+
     /**
      * @param int $socketDomain
      * @param SocketErrorHandler $errorHandler
@@ -138,14 +140,6 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
             $this->eventConnect->call();
             $this->unblock();
         }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function unblock(): void
-    {
-        socket_set_nonblock($this->socket);
     }
 
     /**
@@ -257,6 +251,24 @@ final class UdpServer extends AbstractServer implements BlockingInterface, HasCl
      */
     public function block(): void
     {
+        $this->blocked = true;
         socket_set_block($this->socket);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function unblock(): void
+    {
+        $this->blocked = false;
+        socket_set_nonblock($this->socket);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function isBlocked(): bool
+    {
+        return $this->blocked;
     }
 }

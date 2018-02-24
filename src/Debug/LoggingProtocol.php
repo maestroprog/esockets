@@ -31,19 +31,6 @@ class LoggingProtocol extends AbstractProtocol implements PingSupportInterface
         });
     }
 
-    protected function log($type, $data)
-    {
-        $data = substr(json_encode($data, JSON_UNESCAPED_UNICODE), 0, 64);
-        Log::log($type, $data);
-    }
-
-    private function pingReceived(PingPacket $ping): void
-    {
-        if (null !== $this->pingCallback) {
-            call_user_func($this->pingCallback, $ping);
-        }
-    }
-
     public static function withRealProtocolClass(string $class): string
     {
         self::$realProtocolClass = $class;
@@ -52,11 +39,7 @@ class LoggingProtocol extends AbstractProtocol implements PingSupportInterface
 
     public function returnRead()
     {
-        $data = $this->realProtocol->returnRead();
-        if ($data !== null) {
-            $this->log('FORCED READING', $data);
-        }
-        return $data;
+        return $this->realProtocol->returnRead();
     }
 
     public function onReceive(callable $callback): CallbackEventListener
@@ -98,5 +81,18 @@ class LoggingProtocol extends AbstractProtocol implements PingSupportInterface
     public function onPingReceived(callable $pingReceived): void
     {
         $this->pingCallback = $pingReceived;
+    }
+
+    private function pingReceived(PingPacket $ping): void
+    {
+        if (null !== $this->pingCallback) {
+            call_user_func($this->pingCallback, $ping);
+        }
+    }
+
+    protected function log($type, $data)
+    {
+        $data = substr(json_encode($data, JSON_UNESCAPED_UNICODE), 0, 256);
+        Log::log($type, $data);
     }
 }
